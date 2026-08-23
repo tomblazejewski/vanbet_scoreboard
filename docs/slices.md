@@ -8,14 +8,17 @@ their status.
 ## 1. Backend logic
 
 Pure functions covering: incrementing points/Sets, serve computation, Set
-progression (win-by-2/Deuce, history), undo/redo. Corresponds to
-`lib/core` in [software-design.md](software-design.md) — no hardware, no
-I/O, tested natively (ADR-0005).
+progression (win-by-2/Deuce, history), undo/redo. Corresponds to the
+Display's state-manipulation core in [software-design.md](software-design.md)
+— no hardware, no I/O, tested on the host machine.
 
 **Status:** grilled, requirements resolved — see
 [slices/01-backend-logic-requirements.md](slices/01-backend-logic-requirements.md).
 `Unlock` cut from scope during implementation scoping (see that doc's
-"Explicitly out of scope"). Not yet implemented.
+"Explicitly out of scope"). Implementation language is Rust — see
+[ADR-0006](adr/0006-rust-for-lib-core.md) (a status fact, not part of the
+requirements doc itself — see `CLAUDE.md`'s "Slicing conventions").
+Checkpoint 1 (data shapes) in progress.
 
 ## 2. Display protocol
 
@@ -45,3 +48,8 @@ For each slice, before writing any code:
 1. Draft a requirements doc for that slice alone.
 2. Grill it (`/grill-with-docs`) until we reach shared understanding.
 3. Only then implement.
+
+Implementation language and tooling are a separate decision from a
+slice's requirements — recorded via ADR when they carry real trade-offs,
+not baked into the requirements doc. See `CLAUDE.md`'s "Slicing
+conventions."

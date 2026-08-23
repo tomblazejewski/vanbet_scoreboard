@@ -5,24 +5,32 @@ Grilled and resolved (see git history for the session). Terms below match
 
 ## Goal
 
-The pure Match/Set/serve/undo logic — `lib/core`'s `apply()` — with nothing
-else attached. No Display, no Storage, no networking, no Arduino. A
+The pure Match/Set/serve/undo logic — the state-manipulation core's
+`apply()` — with nothing else attached. No Display, no Storage, no
+networking, no hardware framework (Arduino, ESP-IDF, or otherwise). A
 function that takes a state and a command and returns a state, plus tests
 proving it's right: **every case should be testable by performing an
 action on a state and checking what state comes out.**
 
 ## Function shape
 
-```cpp
-MatchState apply(const MatchState& state, const Command& cmd);
+```
+apply(state, command) -> state
 ```
 
-Always returns a plain `MatchState` — no accepted/rejected side-channel.
-A command that doesn't apply in the current state (there's nothing to
-`Undo`, etc.) just returns the input state unchanged, same as any other
-identity transform. Whether a caller should have been allowed to send that
-command in the first place is a concern for a layer above this slice (the
-REST boundary in slice 3), not something the pure core signals.
+A pure function: given the current state and one command, returns the
+resulting state. No accepted/rejected side-channel — always returns a
+plain state value. A command that doesn't apply in the current state
+(there's nothing to `Undo`, etc.) just returns the input state unchanged,
+same as any other identity transform. Whether a caller should have been
+allowed to send that command in the first place is a concern for a layer
+above this slice (the REST boundary in slice 3), not something the pure
+core signals.
+
+(Implementation language is Rust — see
+[ADR-0006](../adr/0006-rust-for-lib-core.md) and
+[software-design.md](../software-design.md) for the concrete signature and
+file layout. Per `CLAUDE.md`, that choice lives in the ADR, not here.)
 
 ## In scope
 
@@ -32,8 +40,8 @@ REST boundary in slice 3), not something the pure core signals.
   11/win-by-2, Deuce serve rotation, Set/Match progression, Set history,
   the undo stack (including reopening a completed Set), `Set-server`'s
   re-anchoring math, `Point` freezing once decided (except via `Undo`).
-- GoogleTest test suite under `test/`, run via PlatformIO's `env:native`
-  (ADR-0005).
+- An automated test suite, runnable on the host machine with no hardware
+  or cross-compilation involved.
 
 ## Explicitly out of scope
 
@@ -59,33 +67,34 @@ REST boundary in slice 3), not something the pure core signals.
 ## Deliverables
 
 Source split by concern (`CLAUDE.md`'s code-organization convention), each
-with a mirrored test file:
+with a mirrored test module:
 
-- `firmware/display/lib/core/command.h` — data types (`Side`, `SetResult`,
-  `UndoSnapshot`, `MatchState`, `Command`) and the constants below.
-  `SetResult`, `UndoSnapshot`, and `MatchState` each get an `operator==`
-  (`CLAUDE.md`'s whole-object-assert convention needs it); `MatchState`'s
-  compares scalars directly and, for `history`/`undoStack`, only the live
-  prefix (`[0, historyCount)` / `[0, undoCount)`) — entries past the count
-  are stale buffer contents, not state.
-- `firmware/display/lib/core/scoring.h` / `.cpp` — applying a `Point`,
-  Deuce threshold check.
-- `firmware/display/lib/core/serve.h` / `.cpp` — server computation from
-  `firstServerThisSet` + points played, `Set-server`'s re-anchoring math.
-- `firmware/display/lib/core/undo.h` / `.cpp` — snapshot push/pop,
-  restoring a `MatchState` from an `UndoSnapshot`.
-- `firmware/display/lib/core/set_progression.h` / `.cpp` — Set completion
-  (history append, score reset, `firstServerThisSet` alternation) and
-  Match-decided detection.
-- `firmware/display/lib/core/match_logic.h` / `.cpp` — thin `apply()`
-  dispatcher: switches on `Command.type`, delegates to the above.
-- `firmware/display/test/{scoring,serve,undo,set_progression,match_logic}_test.cpp`
-  — GoogleTest cases, one file per source file above (`match_logic_test.cpp`
-  covers dispatch/no-op cases: `Start-match` while In-Match, unrecognized
-  transitions — not scoring/serve/undo mechanics, which live in their own
-  files).
-- `firmware/display/platformio.ini` — `env:native` added (device env can
-  wait for a later slice; it's not needed to run these tests).
+- A **data-shapes module**: `Side`, `SetResult`, `UndoSnapshot`,
+  `MatchState`, `Command`, and the constants below. `SetResult`,
+  `UndoSnapshot`, and `MatchState` each need a way to compare two values
+  for equality (`CLAUDE.md`'s whole-object-assert convention needs it);
+  `MatchState`'s compares scalars directly and, for `history`/`undoStack`,
+  only the live prefix (`[0, historyCount)` / `[0, undoCount)`) — entries
+  past the count reflect stale, no-longer-live pushes, not current state.
+- A **scoring module**: applying a `Point`, Deuce threshold check.
+- A **serve module**: server computation from `firstServerThisSet` +
+  points played, `Set-server`'s re-anchoring math.
+- An **undo module**: snapshot push/pop, restoring a `MatchState` from an
+  `UndoSnapshot`.
+- A **Set/Match progression module**: Set completion (history append,
+  score reset, `firstServerThisSet` alternation) and Match-decided
+  detection.
+- A thin **`apply()` dispatcher**: switches on the command's type,
+  delegates to the modules above.
+- A **test module per source module above**, mirroring the split (the
+  dispatcher's tests cover dispatch/no-op cases — `Start-match` while
+  In-Match, unrecognized transitions — not scoring/serve/undo mechanics,
+  which live in their own modules' tests).
+- Build/test tooling wired up to run that suite on the host machine.
+
+See [software-design.md](../software-design.md) and
+[ADR-0006](../adr/0006-rust-for-lib-core.md) for how these map to actual
+files, module names, and commands.
 
 ## Constants
 
@@ -98,6 +107,8 @@ with a mirrored test file:
 - `NAME_LEN = 16` — length itself is a REST-boundary validation concern
   (see "Explicitly out of scope"); this slice just needs a buffer big
   enough for whatever the REST layer already validated.
+- All four fit in 8 bits except `MAX_UNDO` and the undo-stack count, which
+  need 16.
 
 ## Test scenarios to cover
 

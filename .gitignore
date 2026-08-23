@@ -3,5 +3,8 @@
 .pioenvs/
 .piolibdeps/
 
+# Rust
+target/
+
 # Secrets baked into firmware at build time (see docs/architecture.md).
 secrets.h
