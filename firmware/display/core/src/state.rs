@@ -29,6 +29,16 @@ pub enum Side {
     Right,
 }
 
+impl Side {
+    /// The other Side — Left <-> Right.
+    pub fn other(self) -> Side {
+        match self {
+            Side::Left => Side::Right,
+            Side::Right => Side::Left,
+        }
+    }
+}
+
 /// A completed Set's final score, appended to `MatchState::history`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SetResult {
