@@ -14,8 +14,8 @@ I/O, tested natively (ADR-0005).
 
 **Status:** grilled, requirements resolved — see
 [slices/01-backend-logic-requirements.md](slices/01-backend-logic-requirements.md).
-One item deliberately left open (`Unlock`'s state representation) to
-decide during implementation. Not yet implemented.
+`Unlock` cut from scope during implementation scoping (see that doc's
+"Explicitly out of scope"). Not yet implemented.
 
 ## 2. Display protocol
 

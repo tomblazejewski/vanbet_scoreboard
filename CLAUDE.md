@@ -17,16 +17,15 @@ Conventions that apply to every session working on this project.
   least) one test.
 - **Group tests by concern, with informative titles.** Organize test
   files/suites around what's being tested (e.g. scoring, serve rotation,
-  undo, Set/Match progression, Unlock), not around implementation
-  mechanics — and name each test for the behavior it proves, not a
-  generic label.
+  undo, Set/Match progression), not around implementation mechanics — and
+  name each test for the behavior it proves, not a generic label.
 
 ## Code organization
 
 - **Split source files by concern**, not one large file per module. The
   same concerns the tests are grouped by (scoring, serve rotation, undo,
-  Set/Match progression, Unlock, ...) should be visible as separate source
-  files, not folded into a single monolithic file like `match_logic.cpp`.
+  Set/Match progression, ...) should be visible as separate source files,
+  not folded into a single monolithic file like `match_logic.cpp`.
 - **Test file structure mirrors source file structure**, one-to-one. If
   source splits into `lib/core/scoring.cpp`, `lib/core/serve.cpp`, etc.,
   tests split the same way: `test/scoring_test.cpp`, `test/serve_test.cpp`

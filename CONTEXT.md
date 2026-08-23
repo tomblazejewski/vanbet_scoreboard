@@ -26,13 +26,6 @@ The Display's state while a Match is in progress — whether or not that Match i
 decided (see Match). The other of the Display's two states (see Standby).
 _Avoid_: MATCH_ACTIVE, active == true
 
-**Unlock**:
-A command that lets a Match keep accepting points after it has concluded by
-standard rules (see Match) — for continuing play under non-standard rules when
-players want to keep going past what would otherwise end the Match. How this is
-represented in state is still an open implementation question — see
-[docs/slices/01-backend-logic-requirements.md](docs/slices/01-backend-logic-requirements.md).
-
 **Deuce**:
 The state within a Set when the score reaches 10-10. Changes serve rotation from
 2 serves per turn to 1 serve per turn; the Set continues until one side leads by 2.

@@ -18,12 +18,11 @@ Fixed rules, not configurable — see the "explicitly out of scope" note in
   the final result, but stays In-Match (not Standby) until an explicit
   `Close` (see [ADR-0002](adr/0002-persist-and-resume-explicit-close.md)).
 - Once decided, `Point` stops changing anything — the score is frozen at
-  the final result. `Undo` is the one exception: it still works, since
-  reversing a mistaken match-ending point is exactly the scenario it
-  exists for (see "Undo" below).
-- `Unlock` (see [`CONTEXT.md`](../CONTEXT.md)) lets a decided Match keep
-  accepting `Point`s again, for continuing play under non-standard rules.
-  Exact state representation is still open — see
+  the final result, unconditionally. `Undo` is the one exception: it still
+  works, since reversing a mistaken match-ending point is exactly the
+  scenario it exists for (see "Undo" below). There is no other way to
+  resume scoring past a decided Match — an `Unlock`-style override was
+  considered and cut from MVP scope; see
   [slices/01-backend-logic-requirements.md](slices/01-backend-logic-requirements.md).
 
 ## Serve rotation

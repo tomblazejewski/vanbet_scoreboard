@@ -73,7 +73,7 @@ staleness check — see ADR-0002.
 
 ```cpp
 constexpr uint8_t POINTS_TO_WIN = 11;   // fixed, not configurable — see match-rules.md
-constexpr uint8_t MAX_SETS = 7;         // ceil of the largest supported bestOf
+constexpr uint8_t MAX_SETS = 11;        // capped maximum bestOf (odd, ≤ 11)
 constexpr uint16_t MAX_UNDO = 200;      // generous headroom for a full match
 
 enum class Side : uint8_t { LEFT = 0, RIGHT = 1 };
@@ -94,7 +94,7 @@ struct UndoSnapshot {
 struct MatchState {
   bool active;                 // false == NO_MATCH
   char nameLeft[16], nameRight[16];
-  uint8_t bestOf;               // 3, 5, or 7
+  uint8_t bestOf;               // odd, capped at 11 (enforced at REST boundary)
   uint8_t setsWonLeft, setsWonRight;
   uint8_t scoreLeft, scoreRight;    // current Set in progress
   Side server;
