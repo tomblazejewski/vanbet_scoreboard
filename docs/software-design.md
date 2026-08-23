@@ -15,7 +15,8 @@ adapters. The Display's core is Rust ([ADR-0006](adr/0006-rust-for-lib-core.md))
 firmware/display/
   core/                # Rust crate — no hardware/OS deps (ADR-0006)
     src/
-      command.rs            Side, Command, MatchState, SetResult, UndoSnapshot
+      state.rs              Side, SetResult, UndoSnapshot, MatchState
+      command.rs             Command
       scoring.rs
       serve.rs
       undo.rs
@@ -25,6 +26,8 @@ firmware/display/
       application.rs         thin shell: apply() + storage.save() + display.render()
       lib.rs                 re-exports
     tests/
+      state_test.rs
+      command_test.rs
       scoring_test.rs
       serve_test.rs
       undo_test.rs
@@ -89,25 +92,19 @@ traits.
 
 ## Command
 
-A single tagged value type, not a trait with a method per action — see
-the rationale in the grilling transcript: it composes with a queue directly,
-and a scripted test fixture is just `Vec<Command>`.
+A single value type, not a trait with a method per action — it composes
+with a queue directly, and a scripted test fixture is just `Vec<Command>`.
+A data-carrying enum, not a tagged struct: each variant holds only the
+data that command needs, so there's no field left irrelevant depending on
+which variant it is.
 
 ```rust
-pub enum CommandType {
-    StartMatch,
-    Point,
+pub enum Command {
+    StartMatch { name_left: String, name_right: String, best_of: u8 },
+    Point { side: Side },
     Undo,
-    SetServer,
+    SetServer { side: Side },
     Close,
-}
-
-pub struct Command {
-    pub cmd_type: CommandType,
-    pub side: Side,                    // Point, SetServer
-    pub name_left: String,
-    pub name_right: String,            // StartMatch
-    pub best_of: u8,                   // StartMatch
 }
 ```
 

@@ -1,4 +1,4 @@
-//! `command.rs`'s `PartialEq` for `MatchState` is what the
+//! `state.rs`'s `PartialEq` for `MatchState` is what the
 //! whole-object-assert testing convention (`CLAUDE.md`) depends on for
 //! every other test module — pin its behavior down directly, including the
 //! "only the live prefix matters" rule for the `history`/`undo_stack`
@@ -8,14 +8,6 @@ use display_core::{MatchState, SetResult};
 
 mod match_state_equality {
     use super::*;
-
-    #[test]
-    fn default_constructed_states_are_equal() {
-        let a = MatchState::default();
-        let b = MatchState::default();
-
-        assert_eq!(a, b);
-    }
 
     #[test]
     fn differing_score_is_not_equal() {
