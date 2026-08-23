@@ -46,9 +46,10 @@ pub struct SetResult {
     pub score_right: u8,
 }
 
-/// Pushed before every point is applied; popped + restored on Undo.
-/// Deliberately NOT used for Set-server corrections — undo is for points,
-/// not serve corrections, which have their own dedicated mechanism.
+/// Pushed before every `Point` or `Set-server` is applied; popped +
+/// restored on Undo. Both mutate server-rotation state (and `Point` may
+/// also mutate score/history/setsWon on a Set completion), and `Undo`
+/// covers reversing either kind of mistake.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct UndoSnapshot {
     pub score_left: u8,

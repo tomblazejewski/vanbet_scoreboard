@@ -38,8 +38,10 @@ file layout. Per `CLAUDE.md`, that choice lives in the ADR, not here.)
 - Commands: `Start-match`, `Point`, `Undo`, `Set-server`, `Close`.
 - The rules in [match-rules.md](../match-rules.md): Set win at
   11/win-by-2, Deuce serve rotation, Set/Match progression, Set history,
-  the undo stack (including reopening a completed Set), `Set-server`'s
-  re-anchoring math, `Point` freezing once decided (except via `Undo`).
+  the undo stack (both `Point` and `Set-server` push onto it — reopening a
+  completed Set and reversing a server correction are both `Undo`'s job),
+  `Set-server`'s re-anchoring math, `Point` freezing once decided (except
+  via `Undo`).
 - An automated test suite, runnable on the host machine with no hardware
   or cross-compilation involved.
 
@@ -133,14 +135,17 @@ files, module names, and commands.
 10. Repeated `Undo` walks back multiple points in sequence, including
     across a Set boundary (reopening a just-completed Set).
 11. `Undo` on an empty stack is a no-op (state unchanged).
-12. `Set-server {side}` sets the currently-computed server to `side`
-    without touching the undo stack, and a subsequent `Point` continues
-    auto-rotation correctly from that corrected point (not from square
-    one).
-13. `Start-match` from Standby succeeds: sets names/bestOf, resets all
+12. `Set-server {side}` sets the currently-computed server to `side`,
+    pushing onto the undo stack like `Point` does, and a subsequent
+    `Point` continues auto-rotation correctly from that corrected point
+    (not from square one).
+13. `Undo` reverses a `Set-server` correction — `server`/
+    `firstServerThisSet` revert to what they were immediately before that
+    correction.
+14. `Start-match` from Standby succeeds: sets names/bestOf, resets all
     scores/history/undo, transitions to In-Match.
-14. `Start-match` while already In-Match is a no-op (state unchanged) —
+15. `Start-match` while already In-Match is a no-op (state unchanged) —
     matches the general "doesn't apply here" identity-transform rule,
     same as any other command that doesn't apply.
-15. `Close` returns to Standby and clears the undo stack, regardless of
+16. `Close` returns to Standby and clears the undo stack, regardless of
     whether the Match was decided.
