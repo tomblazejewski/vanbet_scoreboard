@@ -13,7 +13,25 @@ _Avoid_: Game (ITTF's official term, but not how this project talks)
 
 **Match**:
 The full contest between two Players — best of 3, 5, or 7 Sets, decided once one
-side has won a majority of Sets.
+side has won a majority of Sets. Exists only while the Display is In-Match.
+
+**Standby**:
+The Display's state when there is no Match in progress — before the first Match of
+the day, or after one has ended. One of two values of the Display's state (see
+In-Match).
+_Avoid_: NO_MATCH, idle, active == false
+
+**In-Match**:
+The Display's state while a Match is in progress — whether or not that Match is
+decided (see Match). The other of the Display's two states (see Standby).
+_Avoid_: MATCH_ACTIVE, active == true
+
+**Unlock**:
+A command that lets a Match keep accepting points after it has concluded by
+standard rules (see Match) — for continuing play under non-standard rules when
+players want to keep going past what would otherwise end the Match. How this is
+represented in state is still an open implementation question — see
+[docs/slices/01-backend-logic-requirements.md](docs/slices/01-backend-logic-requirements.md).
 
 **Deuce**:
 The state within a Set when the score reaches 10-10. Changes serve rotation from

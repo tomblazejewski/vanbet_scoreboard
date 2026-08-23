@@ -14,12 +14,17 @@ Fixed rules, not configurable — see the "explicitly out of scope" note in
 ## Winning the Match
 
 - First to win a majority of `bestOf` Sets (e.g. `bestOf: 5` → first to 3)
-  wins the Match. Once reached, `decided` becomes true — the Display shows
-  the final result, but the Match stays `MATCH_ACTIVE` until an explicit
-  `close` (see [ADR-0002](adr/0002-persist-and-resume-explicit-close.md)).
-  No more Sets are expected after `decided`, but nothing in the firmware
-  forcibly rejects a stray point past that moment either — `close` is the
-  only real guardrail, by design.
+  wins the Match. Once reached, the Match is *decided* — the Display shows
+  the final result, but stays In-Match (not Standby) until an explicit
+  `Close` (see [ADR-0002](adr/0002-persist-and-resume-explicit-close.md)).
+- Once decided, `Point` stops changing anything — the score is frozen at
+  the final result. `Undo` is the one exception: it still works, since
+  reversing a mistaken match-ending point is exactly the scenario it
+  exists for (see "Undo" below).
+- `Unlock` (see [`CONTEXT.md`](../CONTEXT.md)) lets a decided Match keep
+  accepting `Point`s again, for continuing play under non-standard rules.
+  Exact state representation is still open — see
+  [slices/01-backend-logic-requirements.md](slices/01-backend-logic-requirements.md).
 
 ## Serve rotation
 
@@ -39,7 +44,11 @@ A real stack, not single-level: repeated `UNDO` walks back through points
 one at a time, including reversing a Set that just completed (removing it
 from `history`, restoring the pre-completion score, decrementing
 `setsWonLeft`/`setsWonRight`) if the winning point turns out to have been a
-mistake. Scoped to the current Match — the stack is cleared on `close`.
+mistake. Scoped to the current Match — the stack is cleared on `Close`.
+
+`Undo` works even once the Match is decided (unlike `Point`, which freezes)
+— it's the mechanism for fixing a match-ending point that shouldn't have
+counted, so it can't itself be blocked by the state it needs to undo.
 
 `SET_SERVER` corrections are deliberately **not** on the undo stack — undo
 is for point mistakes; a wrong server assignment is fixed by calling
