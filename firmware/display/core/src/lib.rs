@@ -5,11 +5,13 @@
 pub mod command;
 pub mod scoring;
 pub mod serve;
+pub mod set_progression;
 pub mod state;
 pub mod undo;
 
 pub use command::*;
 pub use scoring::*;
 pub use serve::*;
+pub use set_progression::*;
 pub use state::*;
 pub use undo::*;
