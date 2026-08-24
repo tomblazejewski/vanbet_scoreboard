@@ -3,9 +3,13 @@
 //! `docs/adr/0006-rust-for-lib-core.md`.
 
 pub mod command;
+pub mod scoring;
 pub mod serve;
 pub mod state;
+pub mod undo;
 
 pub use command::*;
+pub use scoring::*;
 pub use serve::*;
 pub use state::*;
+pub use undo::*;
