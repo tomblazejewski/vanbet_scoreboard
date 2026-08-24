@@ -29,3 +29,27 @@ pub fn push_undo_snapshot(state: &MatchState) -> MatchState {
     }
     next
 }
+
+/// Pops the most recent `UndoSnapshot` and restores its fields — reversing
+/// whatever `Point` or `Set-server` correction pushed it, including
+/// un-deciding the Match if the popped point was what decided it. A no-op
+/// (state unchanged) on an empty stack.
+pub fn apply_undo(state: &MatchState) -> MatchState {
+    if state.undo_count == 0 {
+        return state.clone();
+    }
+
+    let mut next = state.clone();
+    next.undo_count -= 1;
+    let snapshot = next.undo_stack[next.undo_count as usize];
+
+    next.score_left = snapshot.score_left;
+    next.score_right = snapshot.score_right;
+    next.sets_won_left = snapshot.sets_won_left;
+    next.sets_won_right = snapshot.sets_won_right;
+    next.server = snapshot.server;
+    next.first_server_this_set = snapshot.first_server_this_set;
+    next.history_count = snapshot.history_count;
+
+    next
+}
