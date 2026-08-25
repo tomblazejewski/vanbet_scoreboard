@@ -84,9 +84,10 @@ pub enum Side { Left, Right }
 
 pub struct SetResult { pub score_left: u8, pub score_right: u8 }
 
-// Pushed before every point is applied; popped + restored on undo.
-// Deliberately NOT used for SetServer corrections — undo is for points,
-// not serve corrections, which have their own dedicated mechanism.
+// Pushed before every Point or SetServer is applied; popped + restored on
+// undo. Both mutate server-rotation state (and Point may also mutate
+// score/history/setsWon on a Set completion), and undo covers reversing
+// either kind of mistake.
 pub struct UndoSnapshot {
     pub score_left: u8,
     pub score_right: u8,

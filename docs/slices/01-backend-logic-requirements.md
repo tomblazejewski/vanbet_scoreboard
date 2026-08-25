@@ -27,10 +27,10 @@ allowed to send that command in the first place is a concern for a layer
 above this slice (the REST boundary in slice 3), not something the pure
 core signals.
 
-(Implementation language is Rust — see
-[ADR-0006](../adr/0006-rust-for-lib-core.md) and
-[software-design.md](../software-design.md) for the concrete signature and
-file layout. Per `CLAUDE.md`, that choice lives in the ADR, not here.)
+(For the concrete signature and file layout, see
+[software-design.md](../software-design.md) and whichever ADR under
+[docs/adr/](../adr/) records the implementation language — per
+`CLAUDE.md`'s "Slicing conventions", that choice lives there, not here.)
 
 ## In scope
 

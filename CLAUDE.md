@@ -44,4 +44,8 @@ Conventions that apply to every session working on this project.
   source splits into a `scoring` module, a `serve` module, etc., tests
   split the same way — one test module per source module, not one big
   test file covering everything, and not a test layout that drifts from
-  how the source itself is organized.
+  how the source itself is organized. Exception: a module with no
+  hand-written logic (e.g. a plain data type with only derived/generated
+  traits) doesn't need its own test file — there's nothing non-obvious to
+  pin, and a test would just restate what the derive already guarantees.
+  Revisit once the module gains real behavior.

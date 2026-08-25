@@ -9,7 +9,10 @@ Covers *how the firmware is built*, as distinct from
 ## Shape
 
 Each firmware project splits into a hardware-free core and thin hardware
-adapters. The Display's core is Rust ([ADR-0006](adr/0006-rust-for-lib-core.md)):
+adapters. The Display's core is Rust ([ADR-0006](adr/0006-rust-for-lib-core.md)).
+The tree below is the target shape across all of slice 1's checkpoints —
+`match_logic.rs`, `ports.rs`, `application.rs`, and `match_logic_test.rs`
+are not built yet (Checkpoints 7-8); everything else is:
 
 ```
 firmware/display/
@@ -21,18 +24,17 @@ firmware/display/
       serve.rs
       undo.rs
       set_progression.rs
-      match_logic.rs        pure apply(state, command) -> state
-      ports.rs               Display / Storage traits
-      application.rs         thin shell: apply() + storage.save() + display.render()
+      match_logic.rs        pure apply(state, command) -> state          [planned]
+      ports.rs               Display / Storage traits                    [planned]
+      application.rs         thin shell: apply() + storage.save() + display.render() [planned]
       lib.rs                 re-exports
     tests/
       state_test.rs
-      command_test.rs
       scoring_test.rs
       serve_test.rs
       undo_test.rs
       set_progression_test.rs
-      match_logic_test.rs
+      match_logic_test.rs                                                [planned]
     Cargo.toml
 
   <adapters — implement the Display/Storage traits against real hardware
@@ -46,6 +48,12 @@ firmware/controller/
   test/
   platformio.ini
 ```
+
+No `command_test.rs`, deliberately: `command.rs` is presently just a
+data-carrying enum with derived traits, no hand-written logic — a test
+for it would only restate what `#[derive(PartialEq)]` already guarantees
+(the same tautology already cut from `state_test.rs`'s original suite).
+Revisit once `match_logic.rs` gives `Command` actual behavior to pin.
 
 No code is shared between the two projects' cores — they solve different
 problems (match logic vs. debounce/idle-timing). (The Controller section

@@ -64,6 +64,14 @@ pub struct UndoSnapshot {
 /// The Display's sole authoritative state. `active == false` is Standby;
 /// `active == true` is In-Match (whether or not the Match is decided — see
 /// `docs/architecture.md`'s "Match lifecycle").
+///
+/// Invariant: `history_count <= MAX_SETS` and `undo_count <= MAX_UNDO`.
+/// `undo_count` is maintained within bound structurally (`undo::push_undo_snapshot`'s
+/// ring-buffer eviction can't push it past `MAX_UNDO`); `history_count` relies
+/// on `best_of <= MAX_SETS` holding, which is a REST-boundary validation
+/// concern (slice 3) — this crate assumes it, doesn't enforce it, and
+/// doesn't defend against a `MatchState` that violates it (e.g. corrupted
+/// persisted state, or one hand-built without going through `apply()`).
 #[derive(Clone, Debug)]
 pub struct MatchState {
     pub active: bool,
