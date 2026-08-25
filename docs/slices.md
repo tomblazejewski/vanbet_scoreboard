@@ -12,13 +12,15 @@ progression (win-by-2/Deuce, history), undo/redo. Corresponds to the
 Display's state-manipulation core in [software-design.md](software-design.md)
 — no hardware, no I/O, tested on the host machine.
 
-**Status:** grilled, requirements resolved — see
-[slices/01-backend-logic-requirements.md](slices/01-backend-logic-requirements.md).
-`Unlock` cut from scope during implementation scoping (see that doc's
+**Status:** implemented. See
+[slices/01-backend-logic-requirements.md](slices/01-backend-logic-requirements.md)
+for the resolved requirements (`Unlock` cut from scope — see that doc's
 "Explicitly out of scope"). Implementation language is Rust — see
 [ADR-0006](adr/0006-rust-for-lib-core.md) (a status fact, not part of the
-requirements doc itself — see `CLAUDE.md`'s "Slicing conventions").
-Checkpoint 1 (data shapes) in progress.
+requirements doc itself — see `CLAUDE.md`'s "Slicing conventions"). All 8
+checkpoints landed (`firmware/display/core`); `ports.rs`/`application.rs`
+(wiring the core to real/fake hardware) are a later integration point,
+untouched by this slice.
 
 ## 2. Display protocol
 

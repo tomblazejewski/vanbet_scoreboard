@@ -15,10 +15,14 @@ pub const MAX_SETS: u8 = 11;
 /// See the undo module.
 pub const MAX_UNDO: u16 = 200;
 
-/// Buffer size for a Player name. Length itself is a REST-boundary
-/// validation concern (slice 3) — this just needs a buffer big enough for
-/// whatever the REST layer already validated.
-pub const NAME_LEN: usize = 16;
+/// Buffer size in bytes for a Player name — generous headroom for UTF-8
+/// (accented Latin, Cyrillic, CJK, emoji, ...), where a single character
+/// can take up to 4 bytes, not just plain ASCII. Validating that a name's
+/// *byte* length (not character count) fits within `NAME_LEN` is a
+/// REST-boundary concern (slice 3) — this slice just needs the buffer to
+/// exist; see "Explicitly out of scope" in
+/// docs/slices/01-backend-logic-requirements.md.
+pub const NAME_LEN: usize = 64;
 
 /// Left or Right — fixed for the whole Match by which Controller button is
 /// pressed, not by player identity. See CONTEXT.md.

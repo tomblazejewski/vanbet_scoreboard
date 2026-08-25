@@ -106,9 +106,12 @@ files, module names, and commands.
 - `MAX_UNDO = 200` — generous headroom for a full Match's worth of points;
   the ceiling behaves as "oldest undo capability quietly stops being
   available" if ever hit, not an error.
-- `NAME_LEN = 16` — length itself is a REST-boundary validation concern
-  (see "Explicitly out of scope"); this slice just needs a buffer big
-  enough for whatever the REST layer already validated.
+- `NAME_LEN = 64` (bytes) — sized for UTF-8 headroom (up to 4 bytes per
+  character), not just plain ASCII. Validating that a name's *byte*
+  length fits within `NAME_LEN` — not character count, which would
+  undercount for non-ASCII names — is a REST-boundary validation concern
+  (see "Explicitly out of scope"); this slice just needs the buffer to
+  exist.
 - All four fit in 8 bits except `MAX_UNDO` and the undo-stack count, which
   need 16.
 
