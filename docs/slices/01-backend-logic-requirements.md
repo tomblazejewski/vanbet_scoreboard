@@ -5,37 +5,45 @@ Grilled and resolved (see git history for the session). Terms below match
 
 ## Goal
 
-The pure Match/Set/serve/undo logic — `lib/core`'s `apply()` — with nothing
-else attached. No Display, no Storage, no networking, no Arduino. A
+The pure Match/Set/serve/undo logic — the state-manipulation core's
+`apply()` — with nothing else attached. No Display, no Storage, no
+networking, no hardware framework (Arduino, ESP-IDF, or otherwise). A
 function that takes a state and a command and returns a state, plus tests
 proving it's right: **every case should be testable by performing an
 action on a state and checking what state comes out.**
 
 ## Function shape
 
-```cpp
-MatchState apply(const MatchState& state, const Command& cmd);
+```
+apply(state, command) -> state
 ```
 
-Always returns a plain `MatchState` — no accepted/rejected side-channel.
-A command that doesn't apply in the current state (there's nothing to
-`Undo`, etc.) just returns the input state unchanged, same as any other
-identity transform. Whether a caller should have been allowed to send that
-command in the first place is a concern for a layer above this slice (the
-REST boundary in slice 3), not something the pure core signals.
+A pure function: given the current state and one command, returns the
+resulting state. No accepted/rejected side-channel — always returns a
+plain state value. A command that doesn't apply in the current state
+(there's nothing to `Undo`, etc.) just returns the input state unchanged,
+same as any other identity transform. Whether a caller should have been
+allowed to send that command in the first place is a concern for a layer
+above this slice (the REST boundary in slice 3), not something the pure
+core signals.
+
+(For the concrete signature and file layout, see
+[software-design.md](../software-design.md) and whichever ADR under
+[docs/adr/](../adr/) records the implementation language — per
+`CLAUDE.md`'s "Slicing conventions", that choice lives there, not here.)
 
 ## In scope
 
 - Data shapes: `Side`, `SetResult`, `UndoSnapshot`, `MatchState`, `Command`.
-- Commands: `Start-match`, `Point`, `Undo`, `Set-server`, `Close`,
-  **`Unlock`**.
+- Commands: `Start-match`, `Point`, `Undo`, `Set-server`, `Close`.
 - The rules in [match-rules.md](../match-rules.md): Set win at
   11/win-by-2, Deuce serve rotation, Set/Match progression, Set history,
-  the undo stack (including reopening a completed Set), `Set-server`'s
-  re-anchoring math, `Point` freezing once decided (except via `Undo` or
-  `Unlock`).
-- GoogleTest test suite under `test/`, run via PlatformIO's `env:native`
-  (ADR-0005).
+  the undo stack (both `Point` and `Set-server` push onto it — reopening a
+  completed Set and reversing a server correction are both `Undo`'s job),
+  `Set-server`'s re-anchoring math, `Point` freezing once decided (except
+  via `Undo`).
+- An automated test suite, runnable on the host machine with no hardware
+  or cross-compilation involved.
 
 ## Explicitly out of scope
 
@@ -49,40 +57,60 @@ REST boundary in slice 3), not something the pure core signals.
   `apply()` may assume a `Start-match` command it receives already
   satisfies these constraints; it does not need to handle or test
   malformed input.
+- **`Unlock`.** Cut from MVP scope during implementation scoping — a
+  decided Match's `Point` freeze is unconditional (only `Undo` reverses
+  it). Resuming scoring past a decided Match under non-standard rules was
+  considered (two candidate state representations were discussed) but
+  dropped rather than add state with no consumer yet; revisit if a real
+  need shows up, informed by what slice 2 (Display) or actual usage turns
+  out to require.
 - Anything hardware- or network-facing.
-
-## Still open (deliberately deferred, not blocking this slice)
-
-- **`Unlock`'s exact state representation.** Candidate approaches
-  discussed: (a) a single flag doing double duty — "concluded by standard
-  rules" *is* what blocks `Point`, and `Unlock` clears it outright, so
-  post-unlock state looks as if the Match never concluded; or (b) two
-  separate things — a permanent record that the Match *did* conclude by
-  the rules at some point, plus an independent "currently frozen" switch
-  that `Unlock` flips off. Not resolved — pick one when actually
-  implementing, informed by whatever slice 2 (Display protocol) turns out
-  to need to render.
 
 ## Deliverables
 
-- `firmware/display/lib/core/command.h` — data types.
-- `firmware/display/lib/core/match_logic.h` / `.cpp` — pure `apply()`.
-- `firmware/display/test/test_match_logic.cpp` — GoogleTest cases.
-- `firmware/display/platformio.ini` — `env:native` added (device env can
-  wait for a later slice; it's not needed to run these tests).
+Source split by concern (`CLAUDE.md`'s code-organization convention), each
+with a mirrored test module:
+
+- A **data-shapes module**: `Side`, `SetResult`, `UndoSnapshot`,
+  `MatchState`, `Command`, and the constants below. `SetResult`,
+  `UndoSnapshot`, and `MatchState` each need a way to compare two values
+  for equality (`CLAUDE.md`'s whole-object-assert convention needs it);
+  `MatchState`'s compares scalars directly and, for `history`/`undoStack`,
+  only the live prefix (`[0, historyCount)` / `[0, undoCount)`) — entries
+  past the count reflect stale, no-longer-live pushes, not current state.
+- A **scoring module**: applying a `Point`, Deuce threshold check.
+- A **serve module**: server computation from `firstServerThisSet` +
+  points played, `Set-server`'s re-anchoring math.
+- An **undo module**: snapshot push/pop, restoring a `MatchState` from an
+  `UndoSnapshot`.
+- A **Set/Match progression module**: Set completion (history append,
+  score reset, `firstServerThisSet` alternation) and Match-decided
+  detection.
+- A thin **`apply()` dispatcher**: switches on the command's type,
+  delegates to the modules above.
+- A **test module per source module above**, mirroring the split (the
+  dispatcher's tests cover dispatch/no-op cases — `Start-match` while
+  In-Match, unrecognized transitions — not scoring/serve/undo mechanics,
+  which live in their own modules' tests).
+- Build/test tooling wired up to run that suite on the host machine.
+
+See [software-design.md](../software-design.md) and
+[ADR-0006](../adr/0006-rust-for-lib-core.md) for how these map to actual
+files, module names, and commands.
 
 ## Constants
 
 - `POINTS_TO_WIN = 11` (fixed — see match-rules.md).
 - `MAX_SETS = 11` — sized to the capped maximum `bestOf` (odd, ≤ 11), not
   the original "3/5/7" framing.
-- `MAX_UNDO` — an implementation constant, not a domain decision; picked
-  generously (sized for the higher Set cap) and documented in code, with
-  the ceiling behaving as "oldest undo capability quietly stops being
+- `MAX_UNDO = 200` — generous headroom for a full Match's worth of points;
+  the ceiling behaves as "oldest undo capability quietly stops being
   available" if ever hit, not an error.
 - `NAME_LEN = 16` — length itself is a REST-boundary validation concern
   (see "Explicitly out of scope"); this slice just needs a buffer big
   enough for whatever the REST layer already validated.
+- All four fit in 8 bits except `MAX_UNDO` and the undo-stack count, which
+  need 16.
 
 ## Test scenarios to cover
 
@@ -107,18 +135,17 @@ REST boundary in slice 3), not something the pure core signals.
 10. Repeated `Undo` walks back multiple points in sequence, including
     across a Set boundary (reopening a just-completed Set).
 11. `Undo` on an empty stack is a no-op (state unchanged).
-12. `Set-server {side}` sets the currently-computed server to `side`
-    without touching the undo stack, and a subsequent `Point` continues
-    auto-rotation correctly from that corrected point (not from square
-    one).
-13. `Start-match` from Standby succeeds: sets names/bestOf, resets all
+12. `Set-server {side}` sets the currently-computed server to `side`,
+    pushing onto the undo stack like `Point` does, and a subsequent
+    `Point` continues auto-rotation correctly from that corrected point
+    (not from square one).
+13. `Undo` reverses a `Set-server` correction — `server`/
+    `firstServerThisSet` revert to what they were immediately before that
+    correction.
+14. `Start-match` from Standby succeeds: sets names/bestOf, resets all
     scores/history/undo, transitions to In-Match.
-14. `Start-match` while already In-Match is a no-op (state unchanged) —
+15. `Start-match` while already In-Match is a no-op (state unchanged) —
     matches the general "doesn't apply here" identity-transform rule,
     same as any other command that doesn't apply.
-15. `Close` returns to Standby and clears the undo stack, regardless of
+16. `Close` returns to Standby and clears the undo stack, regardless of
     whether the Match was decided.
-16. `Unlock` on a decided Match allows a subsequent `Point` to change
-    state again (exact intermediate state shape per the open
-    representation question above — pin down the specific assertions once
-    that's decided during implementation).

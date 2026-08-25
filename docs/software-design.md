@@ -2,24 +2,45 @@
 
 Covers *how the firmware is built*, as distinct from
 [architecture.md](architecture.md) (system/network/hardware shape) and
-[protocol.md](protocol.md) (wire format). See [ADR-0004](adr/0004-hexagonal-core-with-display-command-storage-ports.md)
-and [ADR-0005](adr/0005-googletest-native-testing.md) for the reasoning.
+[protocol.md](protocol.md) (wire format). See [ADR-0004](adr/0004-hexagonal-core-with-display-command-storage-ports.md),
+[ADR-0005](adr/0005-googletest-native-testing.md), and
+[ADR-0006](adr/0006-rust-for-lib-core.md) for the reasoning.
 
 ## Shape
 
-Each firmware project (`firmware/display/`, `firmware/controller/`) is split
-into a hardware-free core and thin hardware adapters:
+Each firmware project splits into a hardware-free core and thin hardware
+adapters. The Display's core is Rust ([ADR-0006](adr/0006-rust-for-lib-core.md)).
+The tree below is the target shape across all of slice 1's checkpoints —
+`match_logic.rs`, `ports.rs`, `application.rs`, and `match_logic_test.rs`
+are not built yet (Checkpoints 7-8); everything else is:
 
 ```
 firmware/display/
-  lib/core/     # pure C++ — no Arduino.h, no ESP-IDF, no hardware headers
-    command.h      Side, Command, MatchState, SetResult
-    match_logic.h/.cpp   pure apply(state, command) -> state
-    ports.h         abstract Display / Storage interfaces
-    application.h/.cpp   thin shell: apply() + storage.save() + display.render()
-  src/          # Arduino adapters implementing the ports, + setup()/loop() wiring
-  test/         # GoogleTest, links only against lib/core
-  platformio.ini   # env:esp32dev (device) + env:native (tests)
+  core/                # Rust crate — no hardware/OS deps (ADR-0006)
+    src/
+      state.rs              Side, SetResult, UndoSnapshot, MatchState
+      command.rs             Command
+      scoring.rs
+      serve.rs
+      undo.rs
+      set_progression.rs
+      match_logic.rs        pure apply(state, command) -> state          [planned]
+      ports.rs               Display / Storage traits                    [planned]
+      application.rs         thin shell: apply() + storage.save() + display.render() [planned]
+      lib.rs                 re-exports
+    tests/
+      state_test.rs
+      scoring_test.rs
+      serve_test.rs
+      undo_test.rs
+      set_progression_test.rs
+      match_logic_test.rs                                                [planned]
+    Cargo.toml
+
+  <adapters — implement the Display/Storage traits against real hardware
+   (HUB75 panel, LittleFS) and wire ESP-NOW/HTTP commands into
+   Application::handle(). Not built yet (slice 1 only covers the core);
+   language/structure for this layer is a later decision.>
 
 firmware/controller/
   lib/core/     # pure C++ — debounce/idle-timeout decision logic, Command construction
@@ -28,12 +49,20 @@ firmware/controller/
   platformio.ini
 ```
 
+No `command_test.rs`, deliberately: `command.rs` is presently just a
+data-carrying enum with derived traits, no hand-written logic — a test
+for it would only restate what `#[derive(PartialEq)]` already guarantees
+(the same tautology already cut from `state_test.rs`'s original suite).
+Revisit once `match_logic.rs` gives `Command` actual behavior to pin.
+
 No code is shared between the two projects' cores — they solve different
-problems (match logic vs. debounce/idle-timing).
+problems (match logic vs. debounce/idle-timing). (The Controller section
+above reflects earlier grilling and hasn't been revisited since; treat it
+as unconfirmed until that slice is actually grilled.)
 
 ## The core is a pure function, not a stateful object with side effects
 
-`apply(const MatchState&, const Command&) -> MatchState` (Display's core) takes
+`apply(state: &MatchState, cmd: &Command) -> MatchState` (Display's core) takes
 a state and a command and returns the resulting state — no I/O, no globals, no
 port calls. This is what makes it trivial to test: construct a `MatchState`,
 apply a `Command`, assert on the result — no fakes/mocks needed at all for
@@ -46,77 +75,74 @@ The one place ports get called is `Application`, a thin shell that:
    `storage.save(state)` and `display.render(state)`.
 
 `Application` is still hardware-free (it only knows about the abstract port
-interfaces, not any concrete implementation), so it's also unit-testable —
-just with `MockDisplay`/`MockStorage` (gmock) instead of real hardware,
-verifying e.g. "starting a Match calls storage.save() exactly once" or
-"resuming from a Storage that returns a saved state re-renders it on
-construction."
+traits, not any concrete implementation), so it's also unit-testable —
+just with fake `Display`/`Storage` implementations instead of real
+hardware, verifying e.g. "starting a Match calls storage.save() exactly
+once" or "resuming from a Storage that returns a saved state re-renders it
+on construction."
 
 ## Ports
 
-```cpp
-class Display {
-public:
-  virtual void render(const MatchState&) = 0;
-  virtual ~Display() = default;
-};
+```rust
+pub trait Display {
+    fn render(&mut self, state: &MatchState);
+}
 
-class Storage {
-public:
-  virtual void save(const MatchState&) = 0;
-  virtual std::optional<MatchState> load() = 0;
-  virtual ~Storage() = default;
-};
+pub trait Storage {
+    fn save(&mut self, state: &MatchState);
+    fn load(&self) -> Option<MatchState>;
+}
 ```
 
-Real implementations (`Hub75Display`, `LittleFsStorage`) and fakes
-(`MockDisplay`, `MockStorage`, or a simple in-memory `FakeStorage`) both just
-implement these two methods.
+Real implementations (`Hub75Display`, `LittleFsStorage`) and fakes (an
+in-memory `FakeStorage`, a spy `Display`) both just implement these two
+traits.
 
 ## Command
 
-A single tagged value type, not an interface with a method per action — see
-the rationale in the grilling transcript: it composes with a queue directly,
-and a scripted test fixture is just `std::vector<Command>`.
+A single value type, not a trait with a method per action — it composes
+with a queue directly, and a scripted test fixture is just `Vec<Command>`.
+A data-carrying enum, not a tagged struct: each variant holds only the
+data that command needs, so there's no field left irrelevant depending on
+which variant it is.
 
-```cpp
-enum class CommandType { START_MATCH, POINT, UNDO, SET_SERVER, CLOSE };
-
-struct Command {
-  CommandType type;
-  Side side;                 // POINT, SET_SERVER
-  std::string nameLeft, nameRight;  // START_MATCH
-  uint8_t bestOf;             // START_MATCH
-};
+```rust
+pub enum Command {
+    StartMatch { name_left: String, name_right: String, best_of: u8 },
+    Point { side: Side },
+    Undo,
+    SetServer { side: Side },
+    Close,
+}
 ```
 
 Real Command sources (ESP-NOW receive callback, the phone's WebSocket/HTTP
 handlers) construct a `Command` and push it into a single-writer queue so
 `Application::handle()` is only ever called from one place — see ADR-0004's
-"consequence" note: **the exact queue mechanism is intentionally not designed
-yet**, only that concurrent sources funnel through one drain point rather
-than calling into `Application` directly from whichever FreeRTOS task they
-happen to run on.
+"consequence" note: **the exact queue mechanism reconciling concurrent
+sources is intentionally not designed yet**, only that they funnel through
+one drain point rather than calling into `Application` directly from
+whichever task they happen to run on.
 
 ## Testing
 
-GoogleTest, run via `pio test -e native` (see ADR-0005) — a `native`
-PlatformIO environment with no ESP32 toolchain involved, fast enough to run
-on every save. Test coverage for the Display core should include (not
-exhaustive — the actual `test/` files are the source of truth):
+`cargo test`, run directly against the core crate on the host machine — no
+ESP32 toolchain involved, fast enough to run on every save. Test coverage
+for the Display core should include (not exhaustive — the actual `tests/`
+files are the source of truth):
 
 - A point for a Side increments that Side's score and recomputes `server`.
 - Deuce (10-10) switches serve rotation to every point instead of every 2.
 - Reaching 11 (or beyond, win-by-2) completes the Set, appends to history,
   resets the current score, and alternates `firstServerThisSet`.
 - Winning a majority of `bestOf` Sets sets `decided`, but the Match stays
-  `MATCH_ACTIVE` (no auto-close).
-- `UNDO` reverses the last point, including reopening a just-completed Set
+  In-Match (no auto-close).
+- `Undo` reverses the last point, including reopening a just-completed Set
   (removing it from history, decrementing the Set win, restoring the
   pre-completion score) — and is a no-op on an empty stack.
-- `SET_SERVER` re-anchors `firstServerThisSet` so the current computed
+- `SetServer` re-anchors `firstServerThisSet` so the current computed
   server becomes the requested Side, without disturbing the undo stack.
-- `START_MATCH` is rejected (state unchanged) when a Match is already
-  active; accepted from `NO_MATCH`.
-- `CLOSE` returns to `NO_MATCH` and clears the undo stack regardless of
+- `StartMatch` is rejected (state unchanged) when a Match is already
+  active; accepted from Standby.
+- `Close` returns to Standby and clears the undo stack regardless of
   whether the Match was decided.

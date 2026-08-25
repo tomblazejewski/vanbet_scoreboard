@@ -18,12 +18,11 @@ Fixed rules, not configurable — see the "explicitly out of scope" note in
   the final result, but stays In-Match (not Standby) until an explicit
   `Close` (see [ADR-0002](adr/0002-persist-and-resume-explicit-close.md)).
 - Once decided, `Point` stops changing anything — the score is frozen at
-  the final result. `Undo` is the one exception: it still works, since
-  reversing a mistaken match-ending point is exactly the scenario it
-  exists for (see "Undo" below).
-- `Unlock` (see [`CONTEXT.md`](../CONTEXT.md)) lets a decided Match keep
-  accepting `Point`s again, for continuing play under non-standard rules.
-  Exact state representation is still open — see
+  the final result, unconditionally. `Undo` is the one exception: it still
+  works, since reversing a mistaken match-ending point is exactly the
+  scenario it exists for (see "Undo" below). There is no other way to
+  resume scoring past a decided Match — an `Unlock`-style override was
+  considered and cut from MVP scope; see
   [slices/01-backend-logic-requirements.md](slices/01-backend-logic-requirements.md).
 
 ## Serve rotation
@@ -40,16 +39,17 @@ Fixed rules, not configurable — see the "explicitly out of scope" note in
 
 ## Undo
 
-A real stack, not single-level: repeated `UNDO` walks back through points
-one at a time, including reversing a Set that just completed (removing it
-from `history`, restoring the pre-completion score, decrementing
-`setsWonLeft`/`setsWonRight`) if the winning point turns out to have been a
-mistake. Scoped to the current Match — the stack is cleared on `Close`.
+A real stack, not single-level: repeated `UNDO` walks back through actions
+one at a time. Both `Point` and `SET_SERVER` push onto it:
+
+- Undoing a `Point` reverses the score (and, if it just completed a Set,
+  removes that Set from `history`, restores the pre-completion score, and
+  decrements `setsWonLeft`/`setsWonRight`).
+- Undoing a `SET_SERVER` restores `server`/`firstServerThisSet` to what
+  they were before that correction.
+
+Scoped to the current Match — the stack is cleared on `Close`.
 
 `Undo` works even once the Match is decided (unlike `Point`, which freezes)
 — it's the mechanism for fixing a match-ending point that shouldn't have
 counted, so it can't itself be blocked by the state it needs to undo.
-
-`SET_SERVER` corrections are deliberately **not** on the undo stack — undo
-is for point mistakes; a wrong server assignment is fixed by calling
-`SET_SERVER` again with the right Side, not by undoing.

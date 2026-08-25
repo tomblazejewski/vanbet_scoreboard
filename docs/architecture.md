@@ -71,39 +71,49 @@ staleness check — see ADR-0002.
 
 ## Data model (display firmware)
 
-```cpp
-constexpr uint8_t POINTS_TO_WIN = 11;   // fixed, not configurable — see match-rules.md
-constexpr uint8_t MAX_SETS = 7;         // ceil of the largest supported bestOf
-constexpr uint16_t MAX_UNDO = 200;      // generous headroom for a full match
+Shown in Rust ([ADR-0006](adr/0006-rust-for-lib-core.md); this is the
+Display's state-manipulation core specifically, not the whole firmware —
+see [software-design.md](software-design.md)):
 
-enum class Side : uint8_t { LEFT = 0, RIGHT = 1 };
+```rust
+const POINTS_TO_WIN: u8 = 11;   // fixed, not configurable — see match-rules.md
+const MAX_SETS: u8 = 11;        // capped maximum bestOf (odd, ≤ 11)
+const MAX_UNDO: u16 = 200;      // generous headroom for a full match
 
-struct SetResult { uint8_t scoreLeft, scoreRight; };
+pub enum Side { Left, Right }
 
-// Pushed before every point is applied; popped + restored on undo.
-// Deliberately NOT used for SET_SERVER corrections — undo is for points,
-// not serve corrections, which have their own dedicated mechanism.
-struct UndoSnapshot {
-  uint8_t scoreLeft, scoreRight;
-  uint8_t setsWonLeft, setsWonRight;
-  Side server;
-  Side firstServerThisSet;
-  uint8_t historyCount;
-};
+pub struct SetResult { pub score_left: u8, pub score_right: u8 }
 
-struct MatchState {
-  bool active;                 // false == NO_MATCH
-  char nameLeft[16], nameRight[16];
-  uint8_t bestOf;               // 3, 5, or 7
-  uint8_t setsWonLeft, setsWonRight;
-  uint8_t scoreLeft, scoreRight;    // current Set in progress
-  Side server;
-  Side firstServerThisSet;      // anchor used to compute server from point count
-  SetResult history[MAX_SETS];
-  uint8_t historyCount;
-  UndoSnapshot undoStack[MAX_UNDO];
-  uint16_t undoCount;
-};
+// Pushed before every Point or SetServer is applied; popped + restored on
+// undo. Both mutate server-rotation state (and Point may also mutate
+// score/history/setsWon on a Set completion), and undo covers reversing
+// either kind of mistake.
+pub struct UndoSnapshot {
+    pub score_left: u8,
+    pub score_right: u8,
+    pub sets_won_left: u8,
+    pub sets_won_right: u8,
+    pub server: Side,
+    pub first_server_this_set: Side,
+    pub history_count: u8,
+}
+
+pub struct MatchState {
+    pub active: bool,                 // false == Standby
+    pub name_left: [u8; 16],          // fixed buffer, not String — this is the
+    pub name_right: [u8; 16],         // persisted state, unlike Command's names
+    pub best_of: u8,                  // odd, capped at 11 (enforced at REST boundary)
+    pub sets_won_left: u8,
+    pub sets_won_right: u8,
+    pub score_left: u8,               // current Set in progress
+    pub score_right: u8,
+    pub server: Side,
+    pub first_server_this_set: Side,  // anchor used to compute server from point count
+    pub history: [SetResult; MAX_SETS as usize],
+    pub history_count: u8,
+    pub undo_stack: [UndoSnapshot; MAX_UNDO as usize],
+    pub undo_count: u16,
+}
 ```
 
 ## Serve computation
