@@ -40,8 +40,8 @@ core signals.
   11/win-by-2, Deuce serve rotation, Set/Match progression, Set history,
   the undo stack (both `Point` and `Set-server` push onto it — reopening a
   completed Set and reversing a server correction are both `Undo`'s job),
-  `Set-server`'s re-anchoring math, `Point` freezing once decided (except
-  via `Undo`).
+  `Set-server`'s re-anchoring math, `Point` and `Set-server` both freezing
+  once decided (except via `Undo`).
 - An automated test suite, runnable on the host machine with no hardware
   or cross-compilation involved.
 
@@ -142,10 +142,13 @@ files, module names, and commands.
 13. `Undo` reverses a `Set-server` correction — `server`/
     `firstServerThisSet` revert to what they were immediately before that
     correction.
-14. `Start-match` from Standby succeeds: sets names/bestOf, resets all
+14. **Once decided, `Set-server` leaves state unchanged too** — same
+    freeze as `Point` (except via `Undo`); a decided Match's server
+    display isn't correctable either.
+15. `Start-match` from Standby succeeds: sets names/bestOf, resets all
     scores/history/undo, transitions to In-Match.
-15. `Start-match` while already In-Match is a no-op (state unchanged) —
+16. `Start-match` while already In-Match is a no-op (state unchanged) —
     matches the general "doesn't apply here" identity-transform rule,
     same as any other command that doesn't apply.
-16. `Close` returns to Standby and clears the undo stack, regardless of
+17. `Close` returns to Standby and clears the undo stack, regardless of
     whether the Match was decided.

@@ -7,7 +7,8 @@
 //! 10, 11.
 
 use display_core::{
-    MAX_UNDO, MatchState, Side, UndoSnapshot, apply_point, apply_undo, push_undo_snapshot,
+    MAX_UNDO, MatchState, Side, UndoSnapshot, apply_point, apply_set_server, apply_undo,
+    push_undo_snapshot,
 };
 
 mod push_undo_snapshot_tests {
@@ -179,5 +180,21 @@ mod apply_undo_tests {
         let after_undo = apply_undo(&after_deciding_point);
 
         assert_eq!(after_undo, before_deciding_point);
+    }
+
+    #[test]
+    fn undo_reverses_a_set_server_correction() {
+        let before = MatchState {
+            score_left: 3,
+            score_right: 2,
+            server: Side::Left,
+            first_server_this_set: Side::Left,
+            ..MatchState::default()
+        };
+
+        let after_correction = apply_set_server(&before, Side::Right);
+        let after_undo = apply_undo(&after_correction);
+
+        assert_eq!(after_undo, before);
     }
 }
