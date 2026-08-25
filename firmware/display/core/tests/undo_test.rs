@@ -79,7 +79,18 @@ mod apply_undo_tests {
 
     #[test]
     fn no_op_on_empty_stack() {
-        let state = MatchState { score_left: 4, ..MatchState::default() };
+        let state = MatchState { active: true, score_left: 4, ..MatchState::default() };
+
+        assert_eq!(apply_undo(&state), state);
+    }
+
+    #[test]
+    fn no_op_while_no_match_is_active_even_with_a_non_empty_stack() {
+        // active: false, but undo_count: 1 — proves the guard fires on its
+        // own merits, not just coincidentally via the empty-stack check
+        // (Close always clears undo_count, but this shouldn't rely on that).
+        let mut state = MatchState { undo_count: 1, ..MatchState::default() };
+        state.undo_stack[0] = UndoSnapshot { score_left: 9, ..UndoSnapshot::default() };
 
         assert_eq!(apply_undo(&state), state);
     }
@@ -87,6 +98,7 @@ mod apply_undo_tests {
     #[test]
     fn pops_the_most_recent_snapshot_and_restores_its_fields() {
         let mut state = MatchState {
+            active: true,
             score_left: 5,
             score_right: 3,
             sets_won_left: 1,
@@ -127,6 +139,7 @@ mod apply_undo_tests {
     #[test]
     fn undo_reverses_a_plain_point_round_trip() {
         let before = MatchState {
+            active: true,
             score_left: 3,
             score_right: 2,
             server: Side::Left,
@@ -145,6 +158,7 @@ mod apply_undo_tests {
     fn undo_walks_back_across_a_set_boundary_reopening_the_completed_set() {
         // 10-9, Left about to win the Set.
         let before_set_win = MatchState {
+            active: true,
             score_left: 10,
             score_right: 9,
             server: Side::Right,
@@ -167,6 +181,7 @@ mod apply_undo_tests {
     fn undo_un_decides_the_match_by_restoring_the_pre_point_state() {
         // 1 of 2 needed Sets already won, 10-9 — this Point will decide the Match.
         let before_deciding_point = MatchState {
+            active: true,
             score_left: 10,
             score_right: 9,
             sets_won_left: 1,
@@ -185,6 +200,7 @@ mod apply_undo_tests {
     #[test]
     fn undo_reverses_a_set_server_correction() {
         let before = MatchState {
+            active: true,
             score_left: 3,
             score_right: 2,
             server: Side::Left,

@@ -9,12 +9,12 @@ use crate::undo::push_undo_snapshot;
 /// Increments `side`'s score by 1, leaves the other Side untouched, and
 /// recomputes `server`; completes the Set if the new score calls for it.
 /// Pushes an undo snapshot of the pre-point state first, so `Undo` can
-/// reverse it. A no-op (state unchanged) if the Match is already decided
-/// — that check runs on the *incoming* state, so the Point that decides
-/// the Match still applies normally; only Points received afterward
-/// freeze.
+/// reverse it. A no-op (state unchanged) if there's no Match in progress
+/// (Standby), or if the Match is already decided — the decided check runs
+/// on the *incoming* state, so the Point that decides the Match still
+/// applies normally; only Points received afterward freeze.
 pub fn apply_point(state: &MatchState, side: Side) -> MatchState {
-    if is_match_decided(state) {
+    if !state.active || is_match_decided(state) {
         return state.clone();
     }
 

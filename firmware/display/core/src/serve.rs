@@ -57,9 +57,10 @@ pub fn solve_first_server_for(requested_side: Side, score_left: u8, score_right:
 /// Corrects `server` to `side`, re-anchoring `first_server_this_set` so
 /// auto-rotation continues correctly from here rather than resetting.
 /// Pushes an undo snapshot first, same as `Point`. A no-op (state
-/// unchanged) if the Match is already decided — same freeze as `Point`.
+/// unchanged) if there's no Match in progress (Standby), or if the Match
+/// is already decided — same freeze as `Point`.
 pub fn apply_set_server(state: &MatchState, side: Side) -> MatchState {
-    if is_match_decided(state) {
+    if !state.active || is_match_decided(state) {
         return state.clone();
     }
 

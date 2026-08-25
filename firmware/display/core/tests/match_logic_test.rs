@@ -26,7 +26,7 @@ mod apply_dispatch_tests {
 
     #[test]
     fn routes_point_to_apply_point() {
-        let state = MatchState::default();
+        let state = MatchState { active: true, ..MatchState::default() };
         let cmd = Command::Point { side: Side::Right };
 
         assert_eq!(apply(&state, &cmd), apply_point(&state, Side::Right));
@@ -34,7 +34,8 @@ mod apply_dispatch_tests {
 
     #[test]
     fn routes_undo_to_apply_undo() {
-        let state = MatchState { score_left: 1, undo_count: 1, ..MatchState::default() };
+        let state =
+            MatchState { active: true, score_left: 1, undo_count: 1, ..MatchState::default() };
         let cmd = Command::Undo;
 
         assert_eq!(apply(&state, &cmd), apply_undo(&state));
@@ -42,7 +43,7 @@ mod apply_dispatch_tests {
 
     #[test]
     fn routes_set_server_to_apply_set_server() {
-        let state = MatchState::default();
+        let state = MatchState { active: true, ..MatchState::default() };
         let cmd = Command::SetServer { side: Side::Right };
 
         assert_eq!(apply(&state, &cmd), apply_set_server(&state, Side::Right));

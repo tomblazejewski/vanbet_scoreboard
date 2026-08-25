@@ -52,6 +52,7 @@ mod apply_set_server_tests {
     #[test]
     fn sets_server_to_the_requested_side_and_reanchors_first_server_this_set() {
         let state = MatchState {
+            active: true,
             score_left: 3,
             score_right: 2,
             server: Side::Left,
@@ -84,6 +85,7 @@ mod apply_set_server_tests {
         // requesting Left back means first_server_this_set must flip to
         // Right, not just be set to Left, to make the math come out right.
         let state = MatchState {
+            active: true,
             score_left: 2,
             score_right: 0,
             server: Side::Right,
@@ -114,6 +116,7 @@ mod apply_set_server_tests {
     #[test]
     fn a_subsequent_point_continues_rotation_from_the_corrected_anchor() {
         let state = MatchState {
+            active: true,
             score_left: 3,
             score_right: 2,
             server: Side::Left,
@@ -133,6 +136,7 @@ mod apply_set_server_tests {
     #[test]
     fn once_decided_set_server_leaves_state_unchanged() {
         let state = MatchState {
+            active: true,
             best_of: 3,
             sets_won_left: 2, // majority of 3 already reached
             server: Side::Left,
@@ -143,5 +147,12 @@ mod apply_set_server_tests {
         let next = apply_set_server(&state, Side::Right);
 
         assert_eq!(next, state, "frozen: no undo push, no server change");
+    }
+
+    #[test]
+    fn is_a_no_op_while_no_match_is_active() {
+        let state = MatchState { server: Side::Left, ..MatchState::default() }; // active: false
+
+        assert_eq!(apply_set_server(&state, Side::Right), state);
     }
 }

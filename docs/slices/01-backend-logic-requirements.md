@@ -41,7 +41,9 @@ core signals.
   the undo stack (both `Point` and `Set-server` push onto it — reopening a
   completed Set and reversing a server correction are both `Undo`'s job),
   `Set-server`'s re-anchoring math, `Point` and `Set-server` both freezing
-  once decided (except via `Undo`).
+  once decided (except via `Undo`), and `Point`/`Undo`/`Set-server` all
+  being no-ops while there's no Match in progress (only `Start-match` does
+  anything from Standby).
 - An automated test suite, runnable on the host machine with no hardware
   or cross-compilation involved.
 
@@ -155,3 +157,6 @@ files, module names, and commands.
     same as any other command that doesn't apply.
 17. `Close` returns to Standby and clears the undo stack, regardless of
     whether the Match was decided.
+18. `Point`, `Undo`, and `Set-server` are all no-ops (state unchanged)
+    while in Standby — there's no Match in progress for them to act on.
+    Only `Start-match` does anything from Standby.

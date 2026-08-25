@@ -4,6 +4,15 @@ Fixed rules, not configurable — see the "explicitly out of scope" note in
 [architecture.md](architecture.md). Terms below are defined in
 [`CONTEXT.md`](../CONTEXT.md).
 
+## Commands only apply In-Match
+
+`Point`, `Undo`, and `SET_SERVER` are all no-ops (state unchanged) while
+the Display is in Standby — there's no Match in progress for them to act
+on. Only `Start-match` does anything from Standby. This is the same
+"doesn't apply here" identity-transform rule every other no-op case in
+this doc follows, just for the *lack* of an active Match rather than some
+in-Match condition.
+
 ## Scoring a Set
 
 - First to 11 points wins the Set, **unless** the score reaches 10-10
