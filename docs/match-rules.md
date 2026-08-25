@@ -4,6 +4,15 @@ Fixed rules, not configurable — see the "explicitly out of scope" note in
 [architecture.md](architecture.md). Terms below are defined in
 [`CONTEXT.md`](../CONTEXT.md).
 
+## Commands only apply In-Match
+
+`Point`, `Undo`, and `SET_SERVER` are all no-ops (state unchanged) while
+the Display is in Standby — there's no Match in progress for them to act
+on. Only `Start-match` does anything from Standby. This is the same
+"doesn't apply here" identity-transform rule every other no-op case in
+this doc follows, just for the *lack* of an active Match rather than some
+in-Match condition.
+
 ## Scoring a Set
 
 - First to 11 points wins the Set, **unless** the score reaches 10-10
@@ -18,11 +27,14 @@ Fixed rules, not configurable — see the "explicitly out of scope" note in
   the final result, but stays In-Match (not Standby) until an explicit
   `Close` (see [ADR-0002](adr/0002-persist-and-resume-explicit-close.md)).
 - Once decided, `Point` stops changing anything — the score is frozen at
-  the final result, unconditionally. `Undo` is the one exception: it still
-  works, since reversing a mistaken match-ending point is exactly the
-  scenario it exists for (see "Undo" below). There is no other way to
-  resume scoring past a decided Match — an `Unlock`-style override was
-  considered and cut from MVP scope; see
+  the final result, unconditionally. `SET_SERVER` freezes too — a decided
+  Match's server display can't be corrected either, same reasoning: once
+  the Match is over, nothing about it should still be editable except via
+  `Undo`. `Undo` is the one exception to both: it still works, since
+  reversing a mistaken match-ending point is exactly the scenario it
+  exists for (see "Undo" below). There is no other way to resume scoring
+  or correct the server past a decided Match — an `Unlock`-style override
+  was considered and cut from MVP scope; see
   [slices/01-backend-logic-requirements.md](slices/01-backend-logic-requirements.md).
 
 ## Serve rotation
@@ -50,6 +62,7 @@ one at a time. Both `Point` and `SET_SERVER` push onto it:
 
 Scoped to the current Match — the stack is cleared on `Close`.
 
-`Undo` works even once the Match is decided (unlike `Point`, which freezes)
-— it's the mechanism for fixing a match-ending point that shouldn't have
-counted, so it can't itself be blocked by the state it needs to undo.
+`Undo` works even once the Match is decided (unlike `Point` and
+`SET_SERVER`, which freeze) — it's the mechanism for fixing a match-ending
+point that shouldn't have counted, so it can't itself be blocked by the
+state it needs to undo.

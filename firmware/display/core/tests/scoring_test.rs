@@ -11,11 +11,12 @@ mod apply_point_tests {
 
     #[test]
     fn a_point_for_left_increments_left_and_leaves_right_untouched() {
-        let state = MatchState::default(); // 0-0, first_server_this_set = Left
+        let state = MatchState { active: true, ..MatchState::default() }; // 0-0, first_server_this_set = Left
 
         let next = apply_point(&state, Side::Left);
 
         let mut expected = MatchState {
+            active: true,
             score_left: 1,
             score_right: 0,
             server: Side::Left, // 1 point played, still first_server_this_set's turn
@@ -29,11 +30,12 @@ mod apply_point_tests {
 
     #[test]
     fn a_point_for_right_increments_right_and_leaves_left_untouched() {
-        let state = MatchState::default();
+        let state = MatchState { active: true, ..MatchState::default() };
 
         let next = apply_point(&state, Side::Right);
 
         let mut expected = MatchState {
+            active: true,
             score_left: 0,
             score_right: 1,
             server: Side::Left, // 1 point played, still first_server_this_set's turn
@@ -46,12 +48,24 @@ mod apply_point_tests {
     }
 }
 
+mod inactive_no_op_tests {
+    use super::*;
+
+    #[test]
+    fn a_point_is_a_no_op_while_no_match_is_active() {
+        let state = MatchState { score_left: 3, ..MatchState::default() }; // active: false
+
+        assert_eq!(apply_point(&state, Side::Left), state);
+    }
+}
+
 mod set_completion_tests {
     use super::*;
 
     #[test]
     fn a_point_reaching_eleven_with_two_point_lead_completes_the_set() {
         let state = MatchState {
+            active: true,
             score_left: 10,
             score_right: 9,
             server: Side::Right,
@@ -88,6 +102,7 @@ mod set_completion_tests {
     #[test]
     fn a_point_reaching_eleven_with_one_point_lead_does_not_complete_the_set() {
         let state = MatchState {
+            active: true,
             score_left: 10,
             score_right: 10, // Deuce
             server: Side::Left,
@@ -123,6 +138,7 @@ mod decided_freeze_tests {
     #[test]
     fn once_decided_a_point_leaves_state_unchanged() {
         let state = MatchState {
+            active: true,
             best_of: 3,
             sets_won_left: 2, // majority of 3 already reached
             sets_won_right: 0,
@@ -143,6 +159,7 @@ mod decided_freeze_tests {
         // applies to Points received *after* the Match is already decided,
         // not to the Point that decides it.
         let state = MatchState {
+            active: true,
             best_of: 3,
             sets_won_left: 1,
             sets_won_right: 0,

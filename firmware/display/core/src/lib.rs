@@ -3,6 +3,8 @@
 //! `docs/adr/0006-rust-for-lib-core.md`.
 
 pub mod command;
+pub mod lifecycle;
+pub mod match_logic;
 pub mod scoring;
 pub mod serve;
 pub mod set_progression;
@@ -10,6 +12,8 @@ pub mod state;
 pub mod undo;
 
 pub use command::*;
+pub use lifecycle::*;
+pub use match_logic::*;
 pub use scoring::*;
 pub use serve::*;
 pub use set_progression::*;

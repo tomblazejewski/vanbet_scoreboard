@@ -33,9 +33,13 @@ pub fn push_undo_snapshot(state: &MatchState) -> MatchState {
 /// Pops the most recent `UndoSnapshot` and restores its fields — reversing
 /// whatever `Point` or `Set-server` correction pushed it, including
 /// un-deciding the Match if the popped point was what decided it. A no-op
-/// (state unchanged) on an empty stack.
+/// (state unchanged) on an empty stack, or if there's no Match in progress
+/// (Standby) — `Undo` is scoped to the current Match (see
+/// `docs/match-rules.md`'s "Undo"), and `Close` already clears the stack,
+/// but this guards the rule directly rather than relying on that as an
+/// incidental side effect.
 pub fn apply_undo(state: &MatchState) -> MatchState {
-    if state.undo_count == 0 {
+    if !state.active || state.undo_count == 0 {
         return state.clone();
     }
 

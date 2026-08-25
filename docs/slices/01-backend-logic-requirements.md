@@ -40,8 +40,10 @@ core signals.
   11/win-by-2, Deuce serve rotation, Set/Match progression, Set history,
   the undo stack (both `Point` and `Set-server` push onto it — reopening a
   completed Set and reversing a server correction are both `Undo`'s job),
-  `Set-server`'s re-anchoring math, `Point` freezing once decided (except
-  via `Undo`).
+  `Set-server`'s re-anchoring math, `Point` and `Set-server` both freezing
+  once decided (except via `Undo`), and `Point`/`Undo`/`Set-server` all
+  being no-ops while there's no Match in progress (only `Start-match` does
+  anything from Standby).
 - An automated test suite, runnable on the host machine with no hardware
   or cross-compilation involved.
 
@@ -106,9 +108,12 @@ files, module names, and commands.
 - `MAX_UNDO = 200` — generous headroom for a full Match's worth of points;
   the ceiling behaves as "oldest undo capability quietly stops being
   available" if ever hit, not an error.
-- `NAME_LEN = 16` — length itself is a REST-boundary validation concern
-  (see "Explicitly out of scope"); this slice just needs a buffer big
-  enough for whatever the REST layer already validated.
+- `NAME_LEN = 64` (bytes) — sized for UTF-8 headroom (up to 4 bytes per
+  character), not just plain ASCII. Validating that a name's *byte*
+  length fits within `NAME_LEN` — not character count, which would
+  undercount for non-ASCII names — is a REST-boundary validation concern
+  (see "Explicitly out of scope"); this slice just needs the buffer to
+  exist.
 - All four fit in 8 bits except `MAX_UNDO` and the undo-stack count, which
   need 16.
 
@@ -142,10 +147,16 @@ files, module names, and commands.
 13. `Undo` reverses a `Set-server` correction — `server`/
     `firstServerThisSet` revert to what they were immediately before that
     correction.
-14. `Start-match` from Standby succeeds: sets names/bestOf, resets all
+14. **Once decided, `Set-server` leaves state unchanged too** — same
+    freeze as `Point` (except via `Undo`); a decided Match's server
+    display isn't correctable either.
+15. `Start-match` from Standby succeeds: sets names/bestOf, resets all
     scores/history/undo, transitions to In-Match.
-15. `Start-match` while already In-Match is a no-op (state unchanged) —
+16. `Start-match` while already In-Match is a no-op (state unchanged) —
     matches the general "doesn't apply here" identity-transform rule,
     same as any other command that doesn't apply.
-16. `Close` returns to Standby and clears the undo stack, regardless of
+17. `Close` returns to Standby and clears the undo stack, regardless of
     whether the Match was decided.
+18. `Point`, `Undo`, and `Set-server` are all no-ops (state unchanged)
+    while in Standby — there's no Match in progress for them to act on.
+    Only `Start-match` does anything from Standby.

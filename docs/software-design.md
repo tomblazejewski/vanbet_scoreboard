@@ -10,9 +10,8 @@ Covers *how the firmware is built*, as distinct from
 
 Each firmware project splits into a hardware-free core and thin hardware
 adapters. The Display's core is Rust ([ADR-0006](adr/0006-rust-for-lib-core.md)).
-The tree below is the target shape across all of slice 1's checkpoints —
-`match_logic.rs`, `ports.rs`, `application.rs`, and `match_logic_test.rs`
-are not built yet (Checkpoints 7-8); everything else is:
+Slice 1 (this core, minus the ports/adapters) is now fully built; `ports.rs`
+and `application.rs` are the next integration point, a later slice:
 
 ```
 firmware/display/
@@ -24,7 +23,8 @@ firmware/display/
       serve.rs
       undo.rs
       set_progression.rs
-      match_logic.rs        pure apply(state, command) -> state          [planned]
+      lifecycle.rs           Start-match / Close (Standby <-> In-Match)
+      match_logic.rs        pure apply(state, command) -> state
       ports.rs               Display / Storage traits                    [planned]
       application.rs         thin shell: apply() + storage.save() + display.render() [planned]
       lib.rs                 re-exports
@@ -34,7 +34,8 @@ firmware/display/
       serve_test.rs
       undo_test.rs
       set_progression_test.rs
-      match_logic_test.rs                                                [planned]
+      lifecycle_test.rs
+      match_logic_test.rs
     Cargo.toml
 
   <adapters — implement the Display/Storage traits against real hardware
@@ -53,7 +54,10 @@ No `command_test.rs`, deliberately: `command.rs` is presently just a
 data-carrying enum with derived traits, no hand-written logic — a test
 for it would only restate what `#[derive(PartialEq)]` already guarantees
 (the same tautology already cut from `state_test.rs`'s original suite).
-Revisit once `match_logic.rs` gives `Command` actual behavior to pin.
+`match_logic.rs` now exists and constructs/matches every `Command`
+variant, but that's `apply()`'s dispatch behavior under test (in
+`match_logic_test.rs`), not something intrinsic to `Command` itself —
+still nothing non-obvious to pin on the type on its own.
 
 No code is shared between the two projects' cores — they solve different
 problems (match logic vs. debounce/idle-timing). (The Controller section

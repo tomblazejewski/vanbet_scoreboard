@@ -100,8 +100,9 @@ pub struct UndoSnapshot {
 
 pub struct MatchState {
     pub active: bool,                 // false == Standby
-    pub name_left: [u8; 16],          // fixed buffer, not String — this is the
-    pub name_right: [u8; 16],         // persisted state, unlike Command's names
+    pub name_left: [u8; 64],          // fixed buffer, not String — this is the
+    pub name_right: [u8; 64],         // persisted state, unlike Command's names
+                                       // (64 bytes: UTF-8 headroom, not just ASCII)
     pub best_of: u8,                  // odd, capped at 11 (enforced at REST boundary)
     pub sets_won_left: u8,
     pub sets_won_right: u8,
