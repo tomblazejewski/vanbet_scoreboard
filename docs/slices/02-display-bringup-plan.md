@@ -71,19 +71,31 @@ itself (`COM6` here) is set via the `ESPFLASH_PORT` env var locally
 rather than hardcoded into the committed `.cargo/config.toml`, since it's
 specific to this machine/USB port, not portable.
 
-**B. `ports.rs` + `application.rs`** in the existing `firmware/display/core`
-crate — hardware-free, `cargo test`-able on host, same TDD approach as
-slice 1. Defines the `Display`/`Storage` traits (from
+**B. `ports.rs` + `application.rs` — done.** Added to the existing
+`firmware/display/core` crate — hardware-free, `cargo test`-able on host,
+same TDD approach as slice 1. Defines the `Display`/`Storage` traits (from
 [software-design.md](../software-design.md)'s "Ports" section) and the
 `Application` shell that calls `apply()` + `storage.save()` +
 `display.render()`.
 
-**C. WiFi station connection** — join the office/home network, confirm it
-gets an IP over serial log.
+**C. WiFi station connection — done.** Joins the network and logs the IP
+over serial (`BlockingWifi`, connect-once-and-log — no retry/backoff yet,
+that's real always-on-deployment behavior to design deliberately later,
+not to guess at now).
 
-**D. Minimal ST7789 rendering** — wire up `mipidsi` + `embedded-graphics`
-as a concrete `Display` impl, prove it can draw plain text to the actual
-screen.
+**D. Minimal ST7789 rendering — done.** A concrete `Display` impl (real
+`mipidsi` + `embedded-graphics`, `firmware/display/device/src/display.rs`)
+draws plain text (the live score) to the actual TTGO screen, confirmed on
+hardware. Three real bugs found and fixed along the way — see the
+Checkpoint D commit for full detail: the wrong SPI peripheral (SPI2
+produced nothing; SPI3 worked), a Rust ownership/Drop bug (the display
+value was scoped to a match arm and got dropped — pins released — the
+instant that block ended, causing "renders once, then goes dark"), and an
+offset-support gap in the `st7789` crate (tried first; it sends raw
+address-window coordinates with no offset mechanism, so it couldn't
+express this panel's 135x240-on-a-240x240-controller quirk) resolved by
+switching to `mipidsi`, which supports an explicit `display_offset()` and
+auto-swaps width/height per rotation.
 
 **E. The REST layer** — `protocol.md`'s real endpoints via `esp-idf-svc`'s
 HTTP server, each parsing JSON into a `Command` and calling
