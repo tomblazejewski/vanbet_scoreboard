@@ -4,21 +4,30 @@ fn main() {
     embuild::espidf::sysenv::output();
 
     // src/secrets.rs is gitignored (real WiFi credentials, never
-    // committed), so it doesn't exist on a fresh clone or in CI. A plain
-    // `mod secrets;` in main.rs needs *some* file there to compile.
+    // committed), so it doesn't exist on a fresh clone or in CI. Stage
+    // whichever of it / the committed secrets.rs.example exists into
+    // OUT_DIR for main.rs to include!() — real credentials if present,
+    // the harmless placeholder otherwise. Never touches src/secrets.rs
+    // itself, so a local real file is never at risk of being overwritten.
     //
-    // A #[cfg(feature = ...)] + #[path] switch between secrets.rs and
-    // secrets.rs.example was tried first, but rustfmt doesn't evaluate
-    // `#[cfg(feature = ...)]` the way rustc does when picking which
-    // #[path]-gated module to format, so it broke `cargo fmt` outright
-    // (tried to read whichever variant it guessed, regardless of the
-    // active feature set). Copying the placeholder into place here avoids
-    // any cfg/path cleverness: real local credentials, once written to
-    // secrets.rs, are never touched or overwritten by this.
-    let secrets = Path::new("src/secrets.rs");
-    if !secrets.exists() {
-        std::fs::copy("src/secrets.rs.example", secrets)
-            .expect("failed to seed src/secrets.rs from src/secrets.rs.example");
-    }
+    // Two earlier approaches were tried and both broke `cargo fmt`:
+    // #[cfg(feature = ...)] + #[path] switching (rustfmt doesn't
+    // evaluate #[cfg(feature)] the way rustc does when picking which
+    // #[path]-gated module to format), and seeding src/secrets.rs
+    // directly from this same build.rs (cargo fmt never runs build
+    // scripts, so the file still didn't exist when rustfmt looked for
+    // it). include!() sidesteps both: unlike `mod name;`, rustfmt never
+    // resolves or requires the existence of an include!()'d path — it's
+    // just an ordinary macro call to it.
+    let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR not set");
+    let real = Path::new("src/secrets.rs");
+    let source = if real.exists() {
+        real
+    } else {
+        Path::new("src/secrets.rs.example")
+    };
+    std::fs::copy(source, Path::new(&out_dir).join("secrets.rs"))
+        .expect("failed to stage secrets.rs for include!()");
+    println!("cargo:rerun-if-changed=src/secrets.rs");
     println!("cargo:rerun-if-changed=src/secrets.rs.example");
 }

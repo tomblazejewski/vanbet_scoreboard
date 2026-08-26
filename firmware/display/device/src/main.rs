@@ -6,11 +6,13 @@ use esp_idf_svc::wifi::{AuthMethod, BlockingWifi, ClientConfiguration, Configura
 
 mod display;
 
-// build.rs seeds src/secrets.rs (gitignored, never committed) from
-// secrets.rs.example on any build where it doesn't already exist yet, so
-// this always resolves — a fresh clone/CI gets the harmless placeholder,
-// filling in real credentials locally is never overwritten.
-mod secrets;
+// build.rs stages src/secrets.rs (gitignored, real credentials, never
+// committed) or falls back to secrets.rs.example into OUT_DIR at build
+// time. include!() rather than `mod secrets;` deliberately — see
+// build.rs for why a `mod`-based approach doesn't survive `cargo fmt`.
+mod secrets {
+    include!(concat!(env!("OUT_DIR"), "/secrets.rs"));
+}
 
 fn main() {
     // It is necessary to call this function once. Otherwise, some patches to the runtime

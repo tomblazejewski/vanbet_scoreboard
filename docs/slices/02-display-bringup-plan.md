@@ -96,14 +96,22 @@ over serial (`BlockingWifi`, connect-once-and-log — no retry/backoff yet,
 that's real always-on-deployment behavior to design deliberately later,
 not to guess at now). Credentials live in `src/secrets.rs` (gitignored,
 never committed — copy it from the committed `secrets.rs.example` and
-fill in real values yourself); `build.rs` seeds that file from the
-example automatically whenever it's missing, so a fresh clone or CI
-compiles against the harmless placeholder with zero setup, and never
-overwrites a real local `secrets.rs` once one exists. (An earlier
-attempt gated this behind a Cargo feature and a `#[cfg]`-conditional
-`#[path]` — reverted because `rustfmt` doesn't evaluate
-`#[cfg(feature = ...)]` when picking which `#[path]`-gated module to
-format, so it broke `cargo fmt` outright.)
+fill in real values yourself). `build.rs` stages whichever of the two
+exists into `OUT_DIR`, and `main.rs` pulls it in with
+`include!(concat!(env!("OUT_DIR"), "/secrets.rs"))` rather than a plain
+`mod secrets;` — so a fresh clone or CI compiles against the harmless
+placeholder with zero setup, real local credentials are never read or
+touched by anything except this copy step, and the file's existence is
+never required for anything other than an actual build. Two more
+"obvious" fixes were tried first and both broke `cargo fmt --all
+--check` (this repo's first-ever fmt check, which is what surfaced all
+of this): a Cargo feature switching `#[cfg]`-gated `#[path]` targets
+(rustfmt doesn't evaluate `#[cfg(feature = ...)]` the way rustc does
+when deciding which `#[path]`-gated module to format), and seeding
+`src/secrets.rs` directly from `build.rs` (`cargo fmt` never runs build
+scripts, so the file still didn't exist when rustfmt went looking for
+it). `include!()` sidesteps both — unlike `mod name;`, rustfmt never
+resolves or requires the existence of an `include!()`'d path.
 
 **D. Minimal ST7789 rendering — done.** A concrete `Display` impl (real
 `mipidsi` + `embedded-graphics`, `firmware/display/device/src/display.rs`)
