@@ -1,5 +1,4 @@
 /.vscode
 /.embuild
 /target
-/Cargo.lock
 /src/secrets.rs

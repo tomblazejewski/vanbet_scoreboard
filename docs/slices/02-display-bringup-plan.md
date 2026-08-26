@@ -8,6 +8,15 @@ validation, error responses, auth-adjacent questions) are still open and
 need their own grilling later; this doc only covers the REST endpoints
 needed to drive `apply()` from a phone during Display bring-up.
 
+**This is a bring-up runbook, not a slice requirements doc** — unlike
+`01-backend-logic-requirements.md`, it deliberately names concrete
+tooling/hardware (`espup`, `esp-idf-template`, the LILYGO TTGO T-Display)
+and reports what was actually installed/built, the same "status fact"
+carve-out `slices.md` gets under CLAUDE.md's "Slicing conventions". That's
+intentional here: this pass *is* real-hardware bring-up, so the toolchain
+isn't a swappable implementation detail to keep out of the doc — it's the
+subject of the doc.
+
 ## Why slices 2 and 3 are being built together here
 
 Both need the same underlying infrastructure on real hardware — a
@@ -69,7 +78,11 @@ environment); `espflash` needs `--non-interactive` or it silently hangs
 trying to prompt for port selection with no TTY available; the port
 itself (`COM6` here) is set via the `ESPFLASH_PORT` env var locally
 rather than hardcoded into the committed `.cargo/config.toml`, since it's
-specific to this machine/USB port, not portable.
+specific to this machine/USB port, not portable. Same treatment for the
+Windows path-length workaround: set `CARGO_TARGET_DIR` to a short local
+path (e.g. `C:/esp-build/device`) as a local env var rather than
+committing `target-dir` into `.cargo/config.toml`, since a hardcoded
+Windows-absolute path there would break non-Windows/CI builds outright.
 
 **B. `ports.rs` + `application.rs` — done.** Added to the existing
 `firmware/display/core` crate — hardware-free, `cargo test`-able on host,
