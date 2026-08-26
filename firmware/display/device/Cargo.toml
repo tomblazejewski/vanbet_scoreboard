@@ -10,12 +10,6 @@ rust-version = "1.82"
 name = "device"
 harness = false # do not use the built-in cargo test harness -> resolve rust-analyzer errors
 
-[features]
-# Off by default so a fresh clone (and CI) compiles against
-# secrets.rs.example without any setup. Enable locally once you've copied
-# secrets.rs.example to secrets.rs and filled in real credentials.
-local-secrets = []
-
 [profile.release]
 opt-level = "s"
 

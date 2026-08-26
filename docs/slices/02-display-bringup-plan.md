@@ -96,9 +96,14 @@ over serial (`BlockingWifi`, connect-once-and-log — no retry/backoff yet,
 that's real always-on-deployment behavior to design deliberately later,
 not to guess at now). Credentials live in `src/secrets.rs` (gitignored,
 never committed — copy it from the committed `secrets.rs.example` and
-fill in real values); a fresh clone or CI, with no `secrets.rs` on disk,
-compiles against the placeholder example instead by default, and local
-builds opt into the real file with `cargo run --features local-secrets`.
+fill in real values yourself); `build.rs` seeds that file from the
+example automatically whenever it's missing, so a fresh clone or CI
+compiles against the harmless placeholder with zero setup, and never
+overwrites a real local `secrets.rs` once one exists. (An earlier
+attempt gated this behind a Cargo feature and a `#[cfg]`-conditional
+`#[path]` — reverted because `rustfmt` doesn't evaluate
+`#[cfg(feature = ...)]` when picking which `#[path]`-gated module to
+format, so it broke `cargo fmt` outright.)
 
 **D. Minimal ST7789 rendering — done.** A concrete `Display` impl (real
 `mipidsi` + `embedded-graphics`, `firmware/display/device/src/display.rs`)

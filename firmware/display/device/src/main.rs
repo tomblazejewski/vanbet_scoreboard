@@ -6,16 +6,10 @@ use esp_idf_svc::wifi::{AuthMethod, BlockingWifi, ClientConfiguration, Configura
 
 mod display;
 
-// `src/secrets.rs` is gitignored (real WiFi credentials, never committed)
-// and doesn't exist on a fresh clone, so a plain `mod secrets;` wouldn't
-// compile by default. Local builds opt into the real file explicitly;
-// everyone else (a fresh clone, CI) gets the placeholder example instead,
-// which compiles but simply won't associate to any real network.
-#[cfg(feature = "local-secrets")]
-#[path = "secrets.rs"]
-mod secrets;
-#[cfg(not(feature = "local-secrets"))]
-#[path = "secrets.rs.example"]
+// build.rs seeds src/secrets.rs (gitignored, never committed) from
+// secrets.rs.example on any build where it doesn't already exist yet, so
+// this always resolves — a fresh clone/CI gets the harmless placeholder,
+// filling in real credentials locally is never overwritten.
 mod secrets;
 
 fn main() {
