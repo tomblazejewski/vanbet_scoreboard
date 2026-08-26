@@ -94,7 +94,11 @@ same TDD approach as slice 1. Defines the `Display`/`Storage` traits (from
 **C. WiFi station connection — done.** Joins the network and logs the IP
 over serial (`BlockingWifi`, connect-once-and-log — no retry/backoff yet,
 that's real always-on-deployment behavior to design deliberately later,
-not to guess at now).
+not to guess at now). Credentials live in `src/secrets.rs` (gitignored,
+never committed — copy it from the committed `secrets.rs.example` and
+fill in real values); a fresh clone or CI, with no `secrets.rs` on disk,
+compiles against the placeholder example instead by default, and local
+builds opt into the real file with `cargo run --features local-secrets`.
 
 **D. Minimal ST7789 rendering — done.** A concrete `Display` impl (real
 `mipidsi` + `embedded-graphics`, `firmware/display/device/src/display.rs`)

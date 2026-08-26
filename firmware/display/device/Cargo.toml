@@ -10,16 +10,27 @@ rust-version = "1.82"
 name = "device"
 harness = false # do not use the built-in cargo test harness -> resolve rust-analyzer errors
 
+[features]
+# Off by default so a fresh clone (and CI) compiles against
+# secrets.rs.example without any setup. Enable locally once you've copied
+# secrets.rs.example to secrets.rs and filled in real credentials.
+local-secrets = []
+
 [profile.release]
 opt-level = "s"
 
 [profile.dev]
 debug = true    # Symbols are nice, and they don't increase the size on Flash
 opt-level = "z"
+# Pinned to the exact commits this crate has been built/flashed against
+# (also captured in Cargo.lock) — an unpinned git patch resolves to
+# whatever the branch HEAD is at build time, which is a real
+# reproducibility risk given how fast-moving these crates are. Bump
+# deliberately, not as a side effect of an unrelated dependency update.
 [patch.crates-io]
-esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys.git" }
-esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal.git" }
-esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc.git" }
+esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys.git", rev = "f616563a87595032f06f1fec95b6816b1c11135c" }
+esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal.git", rev = "04faf8a9221d683615e6b911b2649fa70e85d644" }
+esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc.git", rev = "3bc7361aade1eb9845a979d06e621a69a3dfbaff" }
 
 [dependencies]
 log = "0.4"
