@@ -37,14 +37,17 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(500));
 
     let mut wifi = BlockingWifi::wrap(
-        EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs)).expect("failed to init WiFi driver"),
+        EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs))
+            .expect("failed to init WiFi driver"),
         sys_loop,
     )
     .expect("failed to wrap WiFi driver");
 
     wifi.set_configuration(&Configuration::Client(ClientConfiguration {
         ssid: secrets::WIFI_SSID.try_into().expect("WIFI_SSID too long"),
-        password: secrets::WIFI_PASSWORD.try_into().expect("WIFI_PASSWORD too long"),
+        password: secrets::WIFI_PASSWORD
+            .try_into()
+            .expect("WIFI_PASSWORD too long"),
         auth_method: AuthMethod::WPA2Personal,
         ..Default::default()
     }))
@@ -57,7 +60,11 @@ fn main() {
     // not something to guess at now.
     match wifi.connect().and_then(|()| wifi.wait_netif_up()) {
         Ok(()) => {
-            let ip_info = wifi.wifi().sta_netif().get_ip_info().expect("failed to read IP info");
+            let ip_info = wifi
+                .wifi()
+                .sta_netif()
+                .get_ip_info()
+                .expect("failed to read IP info");
             log::info!("WiFi connected — IP: {}", ip_info.ip);
         }
         Err(e) => {
@@ -78,7 +85,11 @@ fn main() {
         peripherals.pins.gpio4,
     ) {
         Ok(mut st7789) => {
-            let test_state = MatchState { score_left: 7, score_right: 5, ..MatchState::default() };
+            let test_state = MatchState {
+                score_left: 7,
+                score_right: 5,
+                ..MatchState::default()
+            };
             st7789.render(&test_state);
             log::info!("St7789Display: rendered test state");
 

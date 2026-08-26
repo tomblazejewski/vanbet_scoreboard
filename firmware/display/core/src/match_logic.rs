@@ -10,9 +10,11 @@ use crate::undo::apply_undo;
 
 pub fn apply(state: &MatchState, cmd: &Command) -> MatchState {
     match cmd {
-        Command::StartMatch { name_left, name_right, best_of } => {
-            apply_start_match(state, name_left, name_right, *best_of)
-        }
+        Command::StartMatch {
+            name_left,
+            name_right,
+            best_of,
+        } => apply_start_match(state, name_left, name_right, *best_of),
         Command::Point { side } => apply_point(state, *side),
         Command::Undo => apply_undo(state),
         Command::SetServer { side } => apply_set_server(state, *side),

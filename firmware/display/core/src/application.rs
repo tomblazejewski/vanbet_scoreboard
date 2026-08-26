@@ -20,7 +20,11 @@ impl<D: Display, S: Storage> Application<D, S> {
     pub fn new(mut display: D, storage: S) -> Self {
         let state = storage.load().unwrap_or_default();
         display.render(&state);
-        Self { state, display, storage }
+        Self {
+            state,
+            display,
+            storage,
+        }
     }
 
     /// Applies `cmd`, then saves and renders the result. The one operation

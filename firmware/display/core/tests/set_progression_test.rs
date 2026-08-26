@@ -56,7 +56,10 @@ mod complete_set_tests {
             server: Side::Right,
             ..state.clone()
         };
-        expected.history[1] = display_core::SetResult { score_left: 11, score_right: 9 };
+        expected.history[1] = display_core::SetResult {
+            score_left: 11,
+            score_right: 9,
+        };
 
         assert_eq!(next, expected);
     }
@@ -82,7 +85,10 @@ mod complete_set_tests {
             server: Side::Left,
             ..state.clone()
         };
-        expected.history[0] = display_core::SetResult { score_left: 9, score_right: 11 };
+        expected.history[0] = display_core::SetResult {
+            score_left: 9,
+            score_right: 11,
+        };
 
         assert_eq!(next, expected);
     }
@@ -93,19 +99,34 @@ mod is_match_decided_tests {
 
     #[test]
     fn decided_once_left_reaches_majority() {
-        let state = MatchState { best_of: 5, sets_won_left: 3, sets_won_right: 1, ..MatchState::default() };
+        let state = MatchState {
+            best_of: 5,
+            sets_won_left: 3,
+            sets_won_right: 1,
+            ..MatchState::default()
+        };
         assert!(is_match_decided(&state));
     }
 
     #[test]
     fn decided_once_right_reaches_majority() {
-        let state = MatchState { best_of: 5, sets_won_left: 1, sets_won_right: 3, ..MatchState::default() };
+        let state = MatchState {
+            best_of: 5,
+            sets_won_left: 1,
+            sets_won_right: 3,
+            ..MatchState::default()
+        };
         assert!(is_match_decided(&state));
     }
 
     #[test]
     fn not_decided_one_set_below_majority() {
-        let state = MatchState { best_of: 5, sets_won_left: 2, sets_won_right: 2, ..MatchState::default() };
+        let state = MatchState {
+            best_of: 5,
+            sets_won_left: 2,
+            sets_won_right: 2,
+            ..MatchState::default()
+        };
         assert!(!is_match_decided(&state));
     }
 }

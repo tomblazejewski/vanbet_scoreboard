@@ -11,7 +11,10 @@ mod apply_point_tests {
 
     #[test]
     fn a_point_for_left_increments_left_and_leaves_right_untouched() {
-        let state = MatchState { active: true, ..MatchState::default() }; // 0-0, first_server_this_set = Left
+        let state = MatchState {
+            active: true,
+            ..MatchState::default()
+        }; // 0-0, first_server_this_set = Left
 
         let next = apply_point(&state, Side::Left);
 
@@ -30,7 +33,10 @@ mod apply_point_tests {
 
     #[test]
     fn a_point_for_right_increments_right_and_leaves_left_untouched() {
-        let state = MatchState { active: true, ..MatchState::default() };
+        let state = MatchState {
+            active: true,
+            ..MatchState::default()
+        };
 
         let next = apply_point(&state, Side::Right);
 
@@ -53,7 +59,10 @@ mod inactive_no_op_tests {
 
     #[test]
     fn a_point_is_a_no_op_while_no_match_is_active() {
-        let state = MatchState { score_left: 3, ..MatchState::default() }; // active: false
+        let state = MatchState {
+            score_left: 3,
+            ..MatchState::default()
+        }; // active: false
 
         assert_eq!(apply_point(&state, Side::Left), state);
     }
@@ -87,7 +96,10 @@ mod set_completion_tests {
             undo_count: 1,
             ..state.clone()
         };
-        expected.history[0] = SetResult { score_left: 11, score_right: 9 };
+        expected.history[0] = SetResult {
+            score_left: 11,
+            score_right: 9,
+        };
         expected.undo_stack[0] = UndoSnapshot {
             score_left: 10,
             score_right: 9,
@@ -184,7 +196,10 @@ mod decided_freeze_tests {
             undo_count: 1,
             ..state.clone()
         };
-        expected.history[1] = SetResult { score_left: 11, score_right: 9 };
+        expected.history[1] = SetResult {
+            score_left: 11,
+            score_right: 9,
+        };
         expected.undo_stack[0] = UndoSnapshot {
             score_left: 10,
             score_right: 9,

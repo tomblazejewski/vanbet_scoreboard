@@ -16,7 +16,9 @@ struct SpyDisplay {
 
 impl SpyDisplay {
     fn new() -> Self {
-        Self { rendered: Rc::new(RefCell::new(Vec::new())) }
+        Self {
+            rendered: Rc::new(RefCell::new(Vec::new())),
+        }
     }
 }
 
@@ -33,11 +35,17 @@ struct FakeStorage {
 
 impl FakeStorage {
     fn empty() -> Self {
-        Self { loaded: None, saved: Rc::new(RefCell::new(Vec::new())) }
+        Self {
+            loaded: None,
+            saved: Rc::new(RefCell::new(Vec::new())),
+        }
     }
 
     fn with_saved_state(state: MatchState) -> Self {
-        Self { loaded: Some(state), saved: Rc::new(RefCell::new(Vec::new())) }
+        Self {
+            loaded: Some(state),
+            saved: Rc::new(RefCell::new(Vec::new())),
+        }
     }
 }
 
@@ -64,7 +72,11 @@ fn new_starts_at_standby_and_renders_immediately_when_storage_is_empty() {
 
 #[test]
 fn new_resumes_from_storage_and_renders_the_loaded_state() {
-    let saved_state = MatchState { active: true, score_left: 3, ..MatchState::default() };
+    let saved_state = MatchState {
+        active: true,
+        score_left: 3,
+        ..MatchState::default()
+    };
     let display = SpyDisplay::new();
     let rendered = display.rendered.clone();
 
@@ -90,7 +102,11 @@ fn handle_applies_saves_and_renders_exactly_once() {
 
     assert!(app.state().active, "the match started");
     assert_eq!(saved.borrow().len(), 1, "handle() saves exactly once");
-    assert_eq!(rendered.borrow().len(), 2, "one render on construction, one from handle()");
+    assert_eq!(
+        rendered.borrow().len(),
+        2,
+        "one render on construction, one from handle()"
+    );
     assert_eq!(saved.borrow()[0], *app.state());
     assert_eq!(rendered.borrow()[1], *app.state());
 }

@@ -24,14 +24,17 @@ use embedded_graphics::prelude::*;
 use embedded_graphics::text::Text;
 use esp_idf_svc::hal::delay::Delay;
 use esp_idf_svc::hal::gpio::{Gpio16, Gpio18, Gpio19, Gpio23, Gpio4, Gpio5, Output, PinDriver};
-use esp_idf_svc::hal::spi::{config::Config as SpiConfig, Dma, SpiDeviceDriver, SpiDriver, SpiDriverConfig, SPI3};
+use esp_idf_svc::hal::spi::{
+    config::Config as SpiConfig, Dma, SpiDeviceDriver, SpiDriver, SpiDriverConfig, SPI3,
+};
 use esp_idf_svc::hal::units::FromValueType;
 use mipidsi::interface::SpiInterface;
 use mipidsi::models::ST7789;
 use mipidsi::options::{ColorInversion, Orientation, Rotation};
 use mipidsi::Builder;
 
-type SpiIface<'d> = SpiInterface<'static, SpiDeviceDriver<'d, SpiDriver<'d>>, PinDriver<'d, Output>>;
+type SpiIface<'d> =
+    SpiInterface<'static, SpiDeviceDriver<'d, SpiDriver<'d>>, PinDriver<'d, Output>>;
 
 // mipidsi's SPI interface batches pixel writes through a scratch buffer it
 // doesn't own the storage for. Leaked once per display (there's only ever
@@ -69,7 +72,9 @@ impl<'d> St7789Display<'d> {
         let spi_device = SpiDeviceDriver::new(
             driver,
             Some(cs),
-            &SpiConfig::new().baudrate(20.MHz().into()).data_mode(embedded_hal::spi::MODE_0),
+            &SpiConfig::new()
+                .baudrate(20.MHz().into())
+                .data_mode(embedded_hal::spi::MODE_0),
         )?;
 
         let dc = PinDriver::output(dc)?;
@@ -77,7 +82,8 @@ impl<'d> St7789Display<'d> {
         let mut backlight = PinDriver::output(backlight)?;
         backlight.set_high()?;
 
-        let buffer: &'static mut [u8; DMA_BUFFER_SIZE] = Box::leak(Box::new([0u8; DMA_BUFFER_SIZE]));
+        let buffer: &'static mut [u8; DMA_BUFFER_SIZE] =
+            Box::leak(Box::new([0u8; DMA_BUFFER_SIZE]));
         let di = SpiInterface::new(spi_device, dc, buffer);
 
         let panel = Builder::new(ST7789, di)
@@ -89,7 +95,10 @@ impl<'d> St7789Display<'d> {
             .init(&mut Delay::new_default())
             .map_err(|e| anyhow::anyhow!("ST7789 init failed: {e:?}"))?;
 
-        Ok(Self { panel, _backlight: backlight })
+        Ok(Self {
+            panel,
+            _backlight: backlight,
+        })
     }
 }
 
@@ -102,7 +111,10 @@ impl<'d> Display for St7789Display<'d> {
 
         let style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
         let text = std::format!("{} - {}", state.score_left, state.score_right);
-        if Text::new(&text, Point::new(10, 60), style).draw(&mut self.panel).is_err() {
+        if Text::new(&text, Point::new(10, 60), style)
+            .draw(&mut self.panel)
+            .is_err()
+        {
             log::error!("St7789Display: failed to draw text");
         }
     }

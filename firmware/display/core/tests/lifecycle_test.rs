@@ -67,7 +67,11 @@ mod apply_close_tests {
 
         let next = apply_close(&state);
 
-        let expected = MatchState { active: false, undo_count: 0, ..state.clone() };
+        let expected = MatchState {
+            active: false,
+            undo_count: 0,
+            ..state.clone()
+        };
 
         assert_eq!(next, expected);
     }
@@ -86,7 +90,11 @@ mod apply_close_tests {
 
         let next = apply_close(&state);
 
-        let expected = MatchState { active: false, undo_count: 0, ..state.clone() };
+        let expected = MatchState {
+            active: false,
+            undo_count: 0,
+            ..state.clone()
+        };
 
         assert_eq!(next, expected);
     }
