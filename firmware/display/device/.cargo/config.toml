@@ -4,7 +4,7 @@ target-dir = "C:/esp-build/device"
 
 [target.'cfg(target_os = "espidf")']
 linker = "ldproxy"
-runner = "espflash flash --monitor"
+runner = "espflash flash --monitor --non-interactive"
 rustflags = [ "--cfg",  "espidf_time64"]
 
 [unstable]

@@ -52,10 +52,24 @@ implementation of the port, not a throwaway stand-in.
 
 ## Checkpoints
 
-**A. Toolchain bring-up.** Install `espup` (Xtensa fork — `ESP32-D0WDQ6`
-isn't on stock `rustup`), scaffold a minimal `esp-idf-template` "hello
-world," flash it, confirm it boots and prints over serial. Proves the
-flash/monitor pipeline before building anything real on top.
+**A. Toolchain bring-up — done.** Installed `espup` (Xtensa fork —
+`ESP32-D0WDQ6` isn't on stock `rustup`), scaffolded a minimal
+`esp-idf-template` "hello world" at `firmware/display/device`, flashed it,
+confirmed "Hello, world!" over serial. Three real issues hit and fixed
+along the way (see the Checkpoint A commit for full detail): a Windows
+path-length limit (twice — build output, then ESP-IDF's own source
+checkout, both fixed by relocating them to short paths since this repo
+sits deep under a OneDrive-synced folder), and unreliable large-file
+downloads from GitHub releases (worked around with resumable `curl`).
+
+Flashing setup notes for next time (all local-machine config, not
+committed): the board's CH9102 USB-serial chip needs its Windows driver
+installed from WCH directly (not Chocolatey — no admin available in this
+environment); `espflash` needs `--non-interactive` or it silently hangs
+trying to prompt for port selection with no TTY available; the port
+itself (`COM6` here) is set via the `ESPFLASH_PORT` env var locally
+rather than hardcoded into the committed `.cargo/config.toml`, since it's
+specific to this machine/USB port, not portable.
 
 **B. `ports.rs` + `application.rs`** in the existing `firmware/display/core`
 crate — hardware-free, `cargo test`-able on host, same TDD approach as
