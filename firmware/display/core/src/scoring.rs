@@ -25,7 +25,11 @@ pub fn apply_point(state: &MatchState, side: Side) -> MatchState {
         Side::Right => next.score_right += 1,
     }
 
-    next.server = compute_server(next.first_server_this_set, next.score_left, next.score_right);
+    next.server = compute_server(
+        next.first_server_this_set,
+        next.score_left,
+        next.score_right,
+    );
 
     if let Some(winner) = check_set_winner(next.score_left, next.score_right) {
         next = complete_set(&next, winner);

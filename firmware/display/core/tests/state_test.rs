@@ -22,11 +22,17 @@ mod match_state_equality {
     fn differing_live_history_entry_is_not_equal() {
         let mut a = MatchState::default();
         a.history_count = 1;
-        a.history[0] = SetResult { score_left: 11, score_right: 9 };
+        a.history[0] = SetResult {
+            score_left: 11,
+            score_right: 9,
+        };
 
         let mut b = MatchState::default();
         b.history_count = 1;
-        b.history[0] = SetResult { score_left: 11, score_right: 7 };
+        b.history[0] = SetResult {
+            score_left: 11,
+            score_right: 7,
+        };
 
         assert_ne!(a, b);
     }
@@ -35,11 +41,17 @@ mod match_state_equality {
     fn differs_only_past_history_count_are_still_equal() {
         let mut a = MatchState::default();
         a.history_count = 0;
-        a.history[3] = SetResult { score_left: 11, score_right: 9 }; // stale, past the live prefix
+        a.history[3] = SetResult {
+            score_left: 11,
+            score_right: 9,
+        }; // stale, past the live prefix
 
         let mut b = MatchState::default();
         b.history_count = 0;
-        b.history[3] = SetResult { score_left: 5, score_right: 2 }; // different stale contents, same prefix
+        b.history[3] = SetResult {
+            score_left: 5,
+            score_right: 2,
+        }; // different stale contents, same prefix
 
         assert_eq!(a, b);
     }

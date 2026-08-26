@@ -52,7 +52,10 @@ mod push_undo_snapshot_tests {
 
     #[test]
     fn evicts_the_oldest_snapshot_once_full() {
-        let mut state = MatchState { score_left: 9, ..MatchState::default() };
+        let mut state = MatchState {
+            score_left: 9,
+            ..MatchState::default()
+        };
         state.undo_count = MAX_UNDO;
         for i in 0..MAX_UNDO as usize {
             state.undo_stack[i].score_left = i as u8;
@@ -68,7 +71,10 @@ mod push_undo_snapshot_tests {
         let newest = next.undo_stack[(MAX_UNDO - 1) as usize];
         assert_eq!(
             newest,
-            UndoSnapshot { score_left: 9, ..UndoSnapshot::default() },
+            UndoSnapshot {
+                score_left: 9,
+                ..UndoSnapshot::default()
+            },
             "newest entry is the just-pushed snapshot of the pre-push state"
         );
     }
@@ -79,7 +85,11 @@ mod apply_undo_tests {
 
     #[test]
     fn no_op_on_empty_stack() {
-        let state = MatchState { active: true, score_left: 4, ..MatchState::default() };
+        let state = MatchState {
+            active: true,
+            score_left: 4,
+            ..MatchState::default()
+        };
 
         assert_eq!(apply_undo(&state), state);
     }
@@ -89,8 +99,14 @@ mod apply_undo_tests {
         // active: false, but undo_count: 1 — proves the guard fires on its
         // own merits, not just coincidentally via the empty-stack check
         // (Close always clears undo_count, but this shouldn't rely on that).
-        let mut state = MatchState { undo_count: 1, ..MatchState::default() };
-        state.undo_stack[0] = UndoSnapshot { score_left: 9, ..UndoSnapshot::default() };
+        let mut state = MatchState {
+            undo_count: 1,
+            ..MatchState::default()
+        };
+        state.undo_stack[0] = UndoSnapshot {
+            score_left: 9,
+            ..UndoSnapshot::default()
+        };
 
         assert_eq!(apply_undo(&state), state);
     }
@@ -171,10 +187,16 @@ mod apply_undo_tests {
         let after_next_point = apply_point(&after_set_win, Side::Left); // first point of the new Set
 
         let undo_once = apply_undo(&after_next_point);
-        assert_eq!(undo_once, after_set_win, "first undo removes the new-Set point");
+        assert_eq!(
+            undo_once, after_set_win,
+            "first undo removes the new-Set point"
+        );
 
         let undo_twice = apply_undo(&undo_once);
-        assert_eq!(undo_twice, before_set_win, "second undo reopens the just-completed Set");
+        assert_eq!(
+            undo_twice, before_set_win,
+            "second undo reopens the just-completed Set"
+        );
     }
 
     #[test]

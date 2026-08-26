@@ -1,0 +1,24 @@
+[build]
+target = "xtensa-esp32-espidf"
+
+[target.'cfg(target_os = "espidf")']
+linker = "ldproxy"
+runner = "espflash flash --monitor --non-interactive"
+rustflags = [ "--cfg",  "espidf_time64"]
+
+[unstable]
+build-std = ["std", "panic_abort"]
+
+[env]
+MCU = "esp32"
+ESP_IDF_VERSION = "v5.5.3"
+ESP_IDF_TOOLS_INSTALL_DIR = "global"
+
+# On a machine where this project's path is too deep for Windows' path
+# length limit (esp-idf-sys's build output path can exceed it — this repo
+# under a OneDrive-synced path is a real example), set CARGO_TARGET_DIR to
+# a short local path instead of hardcoding target-dir here, which would
+# break non-Windows/CI builds. Whenever the target dir isn't the default
+# in-tree location, CARGO_WORKSPACE_DIR is required so embuild can still
+# find the project root.
+CARGO_WORKSPACE_DIR = { value = "", relative = true }

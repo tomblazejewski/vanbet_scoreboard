@@ -23,8 +23,10 @@ pub fn check_set_winner(score_left: u8, score_right: u8) -> Option<Side> {
 pub fn complete_set(state: &MatchState, winner: Side) -> MatchState {
     let mut next = state.clone();
 
-    next.history[next.history_count as usize] =
-        SetResult { score_left: state.score_left, score_right: state.score_right };
+    next.history[next.history_count as usize] = SetResult {
+        score_left: state.score_left,
+        score_right: state.score_right,
+    };
     next.history_count += 1;
 
     match winner {

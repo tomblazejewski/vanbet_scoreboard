@@ -19,7 +19,12 @@ fn copy_name(name: &str) -> [u8; NAME_LEN] {
 /// transitions to In-Match. A no-op (state unchanged) if a Match is
 /// already active — never silently discards one, matching the general
 /// "doesn't apply here" identity-transform rule other commands follow.
-pub fn apply_start_match(state: &MatchState, name_left: &str, name_right: &str, best_of: u8) -> MatchState {
+pub fn apply_start_match(
+    state: &MatchState,
+    name_left: &str,
+    name_right: &str,
+    best_of: u8,
+) -> MatchState {
     if state.active {
         return state.clone();
     }

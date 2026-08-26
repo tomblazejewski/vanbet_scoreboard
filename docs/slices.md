@@ -32,7 +32,12 @@ hand. This is the concrete instance of the "different display for
 testing" requirement from the earlier architecture grilling (ADR-0004's
 Display port).
 
-**Status:** not yet defined.
+**Status:** in progress — being brought up together with slice 3's REST
+layer against real hardware (a LILYGO TTGO T-Display, exactly the bench
+display described above). See
+[slices/02-display-bringup-plan.md](slices/02-display-bringup-plan.md) for
+the checkpoint plan; this is lighter-weight than a full behavior grilling
+(see that doc's intro).
 
 ## 3. Interacting with the microcontroller
 
@@ -42,7 +47,13 @@ tested from a laptop instead of the physical Controller (mirrors slice 2's
 "swap the real thing for a testable substitute" approach, applied to input
 rather than output).
 
-**Status:** not yet defined.
+**Status:** partially in progress — the phone/HTTP half of
+[protocol.md](protocol.md) is being built alongside slice 2 (see
+[slices/02-display-bringup-plan.md](slices/02-display-bringup-plan.md)),
+since it's needed to exercise the Display port from real hardware. The
+Controller's design (including whether it's even dedicated ESP32
+hardware — an open question raised mid-session, not yet resolved) is
+untouched.
 
 ## Process
 

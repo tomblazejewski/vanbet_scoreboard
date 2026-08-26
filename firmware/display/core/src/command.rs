@@ -11,9 +11,17 @@ use crate::state::Side;
 /// fields left irrelevant/unused depending on which variant it is.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Command {
-    StartMatch { name_left: String, name_right: String, best_of: u8 },
-    Point { side: Side },
+    StartMatch {
+        name_left: String,
+        name_right: String,
+        best_of: u8,
+    },
+    Point {
+        side: Side,
+    },
     Undo,
-    SetServer { side: Side },
+    SetServer {
+        side: Side,
+    },
     Close,
 }

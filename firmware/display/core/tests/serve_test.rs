@@ -151,7 +151,10 @@ mod apply_set_server_tests {
 
     #[test]
     fn is_a_no_op_while_no_match_is_active() {
-        let state = MatchState { server: Side::Left, ..MatchState::default() }; // active: false
+        let state = MatchState {
+            server: Side::Left,
+            ..MatchState::default()
+        }; // active: false
 
         assert_eq!(apply_set_server(&state, Side::Right), state);
     }
