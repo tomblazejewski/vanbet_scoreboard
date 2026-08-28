@@ -32,12 +32,14 @@ hand. This is the concrete instance of the "different display for
 testing" requirement from the earlier architecture grilling (ADR-0004's
 Display port).
 
-**Status:** in progress — being brought up together with slice 3's REST
-layer against real hardware (a LILYGO TTGO T-Display, exactly the bench
-display described above). See
+**Status:** bring-up plan complete (all checkpoints A–F) — brought up
+together with slice 3's REST layer against real hardware (a LILYGO TTGO
+T-Display, exactly the bench display described above). See
 [slices/02-display-bringup-plan.md](slices/02-display-bringup-plan.md) for
-the checkpoint plan; this is lighter-weight than a full behavior grilling
-(see that doc's intro).
+the checkpoint plan and what was found along the way; this was
+lighter-weight than a full behavior grilling (see that doc's intro), and
+the final layout from architecture.md's "Rendering" section (beyond plain
+score text) is still its own future pass.
 
 ## 3. Interacting with the microcontroller
 
@@ -48,12 +50,13 @@ tested from a laptop instead of the physical Controller (mirrors slice 2's
 rather than output).
 
 **Status:** partially in progress — the phone/HTTP half of
-[protocol.md](protocol.md) is being built alongside slice 2 (see
-[slices/02-display-bringup-plan.md](slices/02-display-bringup-plan.md)),
-since it's needed to exercise the Display port from real hardware. The
-Controller's design (including whether it's even dedicated ESP32
-hardware — an open question raised mid-session, not yet resolved) is
-untouched.
+[protocol.md](protocol.md) is done and confirmed against real hardware
+(see [slices/02-display-bringup-plan.md](slices/02-display-bringup-plan.md)'s
+Checkpoint E), built alongside slice 2 since it's needed to exercise the
+Display port. Not yet grilled as its own slice: the Controller's design
+(including whether it's even dedicated ESP32 hardware — an open question
+raised mid-session), error-response conventions beyond the happy-path
+`400`/`409` this pass needed, and any auth-adjacent questions.
 
 ## Process
 

@@ -127,12 +127,36 @@ express this panel's 135x240-on-a-240x240-controller quirk) resolved by
 switching to `mipidsi`, which supports an explicit `display_offset()` and
 auto-swaps width/height per rotation.
 
-**E. The REST layer** — `protocol.md`'s real endpoints via `esp-idf-svc`'s
-HTTP server, each parsing JSON into a `Command` and calling
-`Application::handle()`. This is what gets tested from a phone.
+**E. The REST layer — done, and F folded into it.** `protocol.md`'s six
+endpoints, live via `esp-idf-svc`'s `EspHttpServer`, each parsing JSON
+into a `Command` and calling `Application::handle()` — confirmed against
+real hardware with `curl` for every endpoint plus the documented error
+cases (`409` on `/api/match` while already active, `400` on invalid
+`side`/`bestOf`/malformed JSON). Wiring the REST layer to one live
+`Application` instance *is* Checkpoint F's "wire them together" — there
+wasn't a separate step once E's device-side code existed, so F is done as
+a consequence rather than its own pass.
 
-**F. Wire them together** — `Application`'s `Display` impl renders live
-score/state to the screen as POST requests arrive.
+Split across two crates, continuing the pattern Checkpoint D validated
+(hardware-agnostic logic vs. ESP32-specific glue): a new
+`firmware/display/rest` crate (JSON wire DTOs, REST-boundary input
+validation `display_core::apply()` explicitly assumes has already
+happened — `bestOf` odd/`<=MAX_SETS`, name byte length — no ESP-IDF
+dependency, `cargo test`-able on host, 21 tests) plus thin,
+untested-on-host `device`-crate glue (`rest_server.rs`) registering the
+actual HTTP handlers behind an
+`Arc<Mutex<Application<St7789Display, NoopStorage>>>`.
+
+One real bug found on hardware: the httpd worker task's default 6KB stack
+overflowed (`Guru Meditation Error: StoreProhibited`) handling
+`POST /api/match` — `MatchState` is ~1.8KB (dominated by its 200-entry
+undo stack) and gets constructed/copied several times through
+`apply()`/`Application::handle()`/`render()`, on top of the request
+handler's own body buffer and `serde_json`'s parser. `GET /api/state`
+never panicked, since it never touches any of that. Fixed by raising
+`Configuration::stack_size` to 16KB and shrinking the body buffer from a
+needlessly generous 1024 bytes to 256 (the largest real body,
+`StartMatchRequest`, is under 200).
 
 ## Explicitly out of scope (this pass)
 
