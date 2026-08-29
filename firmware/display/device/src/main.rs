@@ -57,7 +57,7 @@ fn main() {
     // Checkpoint C: connect once, log clearly either way. No retry/backoff
     // yet — that's a real requirement for the always-on office deployment,
     // not something to guess at now.
-    match wifi.connect().and_then(|()| wifi.wait_netif_up()) {
+    let ip = match wifi.connect().and_then(|()| wifi.wait_netif_up()) {
         Ok(()) => {
             let ip_info = wifi
                 .wifi()
@@ -65,11 +65,13 @@ fn main() {
                 .get_ip_info()
                 .expect("failed to read IP info");
             log::info!("WiFi connected — IP: {}", ip_info.ip);
+            Some(ip_info.ip)
         }
         Err(e) => {
             log::error!("WiFi connection failed: {e:?}");
+            None
         }
-    }
+    };
 
     let st7789 = display::St7789Display::new(
         peripherals.spi3,
@@ -79,6 +81,7 @@ fn main() {
         peripherals.pins.gpio16,
         peripherals.pins.gpio23,
         peripherals.pins.gpio4,
+        ip,
     )
     .expect("St7789Display::new failed");
 

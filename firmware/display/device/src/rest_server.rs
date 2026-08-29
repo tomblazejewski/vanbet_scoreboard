@@ -28,6 +28,14 @@ type SharedApp = Arc<Mutex<Application<St7789Display<'static>, NoopStorage>>>;
 /// request.
 const MAX_BODY_LEN: usize = 256;
 
+/// The minimal phone control page — Checkpoint G. A single self-contained
+/// file (inline CSS/JS, no external requests) baked into the binary at
+/// compile time; no LittleFS needed to serve it. See
+/// `docs/slices/02-display-bringup-plan.md`'s Checkpoint G for why this
+/// approach was chosen over LittleFS-backed static files (`protocol.md`'s
+/// original framing) or hosting the page elsewhere.
+const CONTROL_PAGE: &str = include_str!("../static/index.html");
+
 /// A request failure that gets reported back to the client as `400` —
 /// bad JSON, failed REST-boundary validation (see `display_rest::request`),
 /// an over-cap or unreadable body. Genuine failures elsewhere (writing the
@@ -63,6 +71,12 @@ pub fn start(app: SharedApp) -> anyhow::Result<EspHttpServer<'static>> {
         ..Default::default()
     };
     let mut server = EspHttpServer::new(&config)?;
+
+    server.fn_handler("/", Method::Get, |request| -> anyhow::Result<()> {
+        let mut response = request.into_response(200, None, &[("Content-Type", "text/html")])?;
+        response.write_all(CONTROL_PAGE.as_bytes())?;
+        Ok(())
+    })?;
 
     server.fn_handler("/api/state", Method::Get, {
         let app = app.clone();

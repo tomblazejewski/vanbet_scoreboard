@@ -158,7 +158,10 @@ never panicked, since it never touches any of that. Fixed by raising
 needlessly generous 1024 bytes to 256 (the largest real body,
 `StartMatchRequest`, is under 200).
 
-**G. A minimal phone control page.** `protocol.md` describes `GET /` as
+**G. A minimal phone control page — done**, confirmed on real
+hardware — a phone on the same WiFi read the IP off the physical
+display, loaded the page, and started/played a real match through it.
+`protocol.md` describes `GET /` as
 serving "the control web app (static files from LittleFS)" — Checkpoint
 E's scope was specifically the `/api/*` REST endpoints, not this. Grilled
 separately since it's a real interaction-design question, not just
