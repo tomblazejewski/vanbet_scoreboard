@@ -158,6 +158,41 @@ never panicked, since it never touches any of that. Fixed by raising
 needlessly generous 1024 bytes to 256 (the largest real body,
 `StartMatchRequest`, is under 200).
 
+**G. A minimal phone control page.** `protocol.md` describes `GET /` as
+serving "the control web app (static files from LittleFS)" — Checkpoint
+E's scope was specifically the `/api/*` REST endpoints, not this. Grilled
+separately since it's a real interaction-design question, not just
+wiring:
+
+- **Scope**: remote control *and* a live state display (score, sets won,
+  server, a plain "Match decided" indicator) — not a pure remote relying
+  on the physical display alone.
+- **No polling loop.** This phone is the sole control point for now (no
+  second phone, no Controller yet) — the displayed state updates purely
+  from each button tap's own response (every mutating endpoint already
+  returns full state), plus one `GET /api/state` fetch on page load.
+  Revisit if/when multiple simultaneous clients are a real scenario.
+- **Serving**: a single self-contained HTML page (inline CSS/JS, no
+  external requests) embedded via `include_str!` and served from a new
+  `GET /` handler on the existing `EspHttpServer` — no LittleFS needed.
+- **Two views**: a Standby form (names, `bestOf` as a `<select>`
+  constrained to 1/3/5/7/9/11) and an In-Match view (point L/R, undo,
+  set-server L/R, close, state display). Buttons stay always-tappable —
+  no client-side disabling based on `canUndo`/`decided`, since the
+  backend's existing no-op guards (see slice 1) already make an
+  unnecessary tap harmless. Errors show as plain inline text.
+- **Address discovery**: the physical display shows the WiFi IP whenever
+  `!state.active`, reverting to the live score once a match starts.
+  Deliberately kept out of the `Display` *trait* — `render(&MatchState)`
+  stays pure, with no networking concern leaking across the ADR-0004 port
+  boundary. Implemented instead as private state on the concrete
+  `St7789Display`: it's constructed with the (optional — WiFi may have
+  failed) IP already known, and its own `render()` branches on
+  `state.active` internally to decide whether to draw the IP or the
+  score. mDNS was considered and deferred — real added scope (a new
+  esp-idf-svc feature, phone-side mDNS resolution as another moving
+  part) for a single-network personal-use device.
+
 ## Explicitly out of scope (this pass)
 
 - LittleFS / persistence across reboots.
