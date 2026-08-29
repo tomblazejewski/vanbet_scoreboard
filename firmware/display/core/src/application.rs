@@ -38,4 +38,15 @@ impl<D: Display, S: Storage> Application<D, S> {
     pub fn state(&self) -> &MatchState {
         &self.state
     }
+
+    /// Re-renders the current state as-is — no `Command` applied, storage
+    /// untouched. For a `Display` that shows something time-based
+    /// alongside the Match (a wall clock, say) and needs to be redrawn
+    /// periodically even when nothing else is happening; there's no
+    /// "do-nothing" `Command` safe to send through `handle()` for that —
+    /// every real `Command` either changes state or has undo-stack side
+    /// effects.
+    pub fn refresh(&mut self) {
+        self.display.render(&self.state);
+    }
 }

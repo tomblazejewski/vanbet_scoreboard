@@ -367,6 +367,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "display-core",
+ "display-render",
  "display-rest",
  "embassy-time",
  "embedded-graphics",
@@ -383,6 +384,13 @@ dependencies = [
 [[package]]
 name = "display-core"
 version = "0.1.0"
+
+[[package]]
+name = "display-render"
+version = "0.1.0"
+dependencies = [
+ "display-core",
+]
 
 [[package]]
 name = "display-rest"

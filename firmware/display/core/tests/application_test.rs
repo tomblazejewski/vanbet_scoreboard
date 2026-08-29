@@ -110,3 +110,24 @@ fn handle_applies_saves_and_renders_exactly_once() {
     assert_eq!(saved.borrow()[0], *app.state());
     assert_eq!(rendered.borrow()[1], *app.state());
 }
+
+#[test]
+fn refresh_renders_current_state_without_saving_or_changing_it() {
+    let display = SpyDisplay::new();
+    let rendered = display.rendered.clone();
+    let storage = FakeStorage::empty();
+    let saved = storage.saved.clone();
+    let mut app = Application::new(display, storage);
+    let state_before = app.state().clone();
+
+    app.refresh();
+
+    assert_eq!(app.state(), &state_before, "refresh() doesn't change state");
+    assert_eq!(saved.borrow().len(), 0, "refresh() doesn't touch storage");
+    assert_eq!(
+        rendered.borrow().len(),
+        2,
+        "one render on construction, one from refresh()"
+    );
+    assert_eq!(rendered.borrow()[1], *app.state());
+}

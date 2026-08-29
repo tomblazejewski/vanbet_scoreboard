@@ -158,6 +158,67 @@ never panicked, since it never touches any of that. Fixed by raising
 needlessly generous 1024 bytes to 256 (the largest real body,
 `StartMatchRequest`, is under 200).
 
+**H. Full-content rendering + a persistent clock — done**, confirmed on
+real hardware. Lettered H rather than G since
+[PR #6](https://github.com/tomblazejewski/vanbet_scoreboard/pull/6)
+(the minimal phone control page, Checkpoint G) was still unmerged when
+this was grilled — whichever of the two lands second should renumber to
+close the gap.
+
+Grilled from scratch after an initial unreviewed implementation attempt
+was reverted at the user's request — see this checkpoint's git history
+for the full back-and-forth (mockup iterations, the two-column layout
+decision, the clock scope questions) rather than just the resolved
+answers below:
+
+- **Content**: names (server-marked, truncated), current score, sets
+  won, past-Set history (most recent kept when trimmed — not oldest),
+  a decided indicator, and a persistent wall-clock time. Computed by a
+  new `firmware/display/render` crate (`ScoreboardView`/`build_view`)
+  shared by every `Display` driver — same pattern as `display-rest`:
+  no ESP-IDF dependency, `cargo test`-able on host, 8 tests. Each
+  driver reports its own space budget (`max_name_chars`,
+  `max_history_entries`) rather than the crate hard-coding one
+  display's limits — the eventual HUB75 panel (64x64, square, far
+  fewer pixels) will need a much smaller budget and likely won't fit
+  every fact at once (the clock especially), which is a per-display
+  layout decision, not a content gap.
+- **ST7789 layout**: two columns, not stacked — this screen is
+  landscape (240x135), and a single-column layout wastes the width.
+  Big score dominant on the left; names/server/sets/history/decided in
+  a narrower right column; the clock in the top-right corner,
+  persistent across both Standby and In-Match.
+- **Wall-clock time**: SNTP-synced, fixed `Europe/London` POSIX TZ rule
+  (`GMT0BST,M3.5.0/1,M10.5.0` — the OS's own `tzset()`/`localtime_r()`
+  already handle the BST/GMT DST transition dates correctly; a full
+  IANA timezone database is unnecessary for a personal,
+  single-timezone device). `time()`/`localtime_r()`/`tzset()` come from
+  `esp_idf_svc::sys` rather than the `libc` crate — `libc`'s
+  xtensa-esp-idf target support doesn't expose `tzset()`, even though
+  ESP-IDF's own newlib has it. Shows `"--:--"` before the first sync
+  (or if it never manages to sync at all) rather than a wrong time.
+- **`Application::refresh()`** (new, in `core`): re-renders the current
+  state without applying a `Command` or touching storage. Needed
+  because `handle()` only re-renders in response to a real state
+  change, and none of `Command`'s variants are a safe no-op to send
+  just to force a redraw (`Undo` would actually pop real history) —
+  the clock needs the display to redraw periodically even when nothing
+  else is happening, so `main()`'s idle loop now calls `refresh()`
+  roughly once a minute instead of just sleeping forever.
+- **SNTP never actually synced during testing** — no error, no
+  success, just silence after initialization, on a WiFi network that
+  looks like a mobile hotspot (`Three_99F1EB`). The likely cause is the
+  network silently dropping outbound NTP (UDP/123), which mobile
+  hotspots commonly do; the `"--:--"` fallback is doing exactly what it
+  was designed to do in that case. Not investigated further — accepted
+  as a real environmental limitation of the current test network, to
+  revisit if it's still unsynced on whatever network the scoreboard
+  actually lives on permanently.
+- Also fixed in passing: 7 pre-existing `field_reassign_with_default`
+  clippy findings in `core/tests/state_test.rs`, discovered because
+  `cargo clippy` had apparently never been run directly inside `core`'s
+  own directory before.
+
 ## Explicitly out of scope (this pass)
 
 - LittleFS / persistence across reboots.

@@ -5,6 +5,7 @@ use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use esp_idf_svc::wifi::{AuthMethod, BlockingWifi, ClientConfiguration, Configuration, EspWifi};
 use std::sync::{Arc, Mutex};
 
+mod clock;
 mod display;
 mod rest_server;
 mod storage;
@@ -71,6 +72,12 @@ fn main() {
         }
     }
 
+    // Checkpoint H: SNTP needs WiFi already up — started regardless of
+    // whether the connect attempt above actually succeeded, since it just
+    // retries quietly in the background either way; now_hh_mm() reports
+    // "--:--" until it manages to sync.
+    let clock = clock::Clock::start().expect("Clock::start failed");
+
     let st7789 = display::St7789Display::new(
         peripherals.spi3,
         peripherals.pins.gpio18,
@@ -79,6 +86,7 @@ fn main() {
         peripherals.pins.gpio16,
         peripherals.pins.gpio23,
         peripherals.pins.gpio4,
+        clock,
     )
     .expect("St7789Display::new failed");
 
@@ -91,9 +99,15 @@ fn main() {
     // Keeping the returned EspHttpServer alive for the program's lifetime
     // matters exactly the way it did for St7789Display in Checkpoint D —
     // dropping it tears the server down.
-    let _server = rest_server::start(app).expect("rest_server::start failed");
+    let _server = rest_server::start(app.clone()).expect("rest_server::start failed");
 
+    // Checkpoint H: the clock shown on the display needs to keep ticking
+    // even when nobody's tapping anything — handle() only re-renders in
+    // response to a Command, so without this the clock would freeze at
+    // whatever it showed during the last scoring action. refresh()
+    // re-renders the current (unchanged) state on a timer instead.
     loop {
         std::thread::sleep(std::time::Duration::from_secs(60));
+        app.lock().expect("Application mutex poisoned").refresh();
     }
 }

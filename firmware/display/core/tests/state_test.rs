@@ -12,23 +12,29 @@ mod match_state_equality {
     #[test]
     fn differing_score_is_not_equal() {
         let a = MatchState::default();
-        let mut b = MatchState::default();
-        b.score_left = 3;
+        let b = MatchState {
+            score_left: 3,
+            ..MatchState::default()
+        };
 
         assert_ne!(a, b);
     }
 
     #[test]
     fn differing_live_history_entry_is_not_equal() {
-        let mut a = MatchState::default();
-        a.history_count = 1;
+        let mut a = MatchState {
+            history_count: 1,
+            ..MatchState::default()
+        };
         a.history[0] = SetResult {
             score_left: 11,
             score_right: 9,
         };
 
-        let mut b = MatchState::default();
-        b.history_count = 1;
+        let mut b = MatchState {
+            history_count: 1,
+            ..MatchState::default()
+        };
         b.history[0] = SetResult {
             score_left: 11,
             score_right: 7,
@@ -39,15 +45,19 @@ mod match_state_equality {
 
     #[test]
     fn differs_only_past_history_count_are_still_equal() {
-        let mut a = MatchState::default();
-        a.history_count = 0;
+        let mut a = MatchState {
+            history_count: 0,
+            ..MatchState::default()
+        };
         a.history[3] = SetResult {
             score_left: 11,
             score_right: 9,
         }; // stale, past the live prefix
 
-        let mut b = MatchState::default();
-        b.history_count = 0;
+        let mut b = MatchState {
+            history_count: 0,
+            ..MatchState::default()
+        };
         b.history[3] = SetResult {
             score_left: 5,
             score_right: 2,
@@ -58,12 +68,16 @@ mod match_state_equality {
 
     #[test]
     fn differs_only_past_undo_count_are_still_equal() {
-        let mut a = MatchState::default();
-        a.undo_count = 0;
+        let mut a = MatchState {
+            undo_count: 0,
+            ..MatchState::default()
+        };
         a.undo_stack[10].score_left = 7;
 
-        let mut b = MatchState::default();
-        b.undo_count = 0;
+        let mut b = MatchState {
+            undo_count: 0,
+            ..MatchState::default()
+        };
         b.undo_stack[10].score_left = 2;
 
         assert_eq!(a, b);
