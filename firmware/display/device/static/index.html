@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scoreboard</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0;
+    padding: 1rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #111;
+    color: #eee;
+  }
+  h1 { font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem; text-align: center; }
+  .hidden { display: none; }
+  label { display: block; margin: 0.75rem 0 0.25rem; font-size: 0.9rem; color: #aaa; }
+  input, select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem;
+    font-size: 1rem;
+    background: #222;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 6px;
+  }
+  button {
+    font-size: 1rem;
+    padding: 0.9rem;
+    border: none;
+    border-radius: 8px;
+    background: #2a6df0;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:active { background: #1c50b8; }
+  button.secondary { background: #333; }
+  button.danger { background: #a02020; }
+  .points {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1rem 0;
+  }
+  .points button { padding: 1.5rem; font-size: 1.3rem; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .score {
+    text-align: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+  }
+  .meta { text-align: center; color: #aaa; font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .decided { text-align: center; color: #f0c020; font-weight: 600; margin-bottom: 0.75rem; }
+  .error { color: #f04040; text-align: center; min-height: 1.2em; margin: 0.5rem 0; }
+  form button { width: 100%; margin-top: 1rem; }
+</style>
+</head>
+<body>
+  <h1>Scoreboard</h1>
+  <div class="error" id="error"></div>
+
+  <form id="startForm" class="hidden">
+    <label for="nameLeft">Left player</label>
+    <input id="nameLeft" required maxlength="64">
+    <label for="nameRight">Right player</label>
+    <input id="nameRight" required maxlength="64">
+    <label for="bestOf">Best of</label>
+    <select id="bestOf">
+      <option value="1">1</option>
+      <option value="3">3</option>
+      <option value="5" selected>5</option>
+      <option value="7">7</option>
+      <option value="9">9</option>
+      <option value="11">11</option>
+    </select>
+    <button type="submit">Start match</button>
+  </form>
+
+  <div id="matchView" class="hidden">
+    <div class="meta" id="names"></div>
+    <div class="score" id="score"></div>
+    <div class="meta" id="serverLine"></div>
+    <div class="decided hidden" id="decided"></div>
+
+    <div class="points">
+      <button id="pointLeft">Point left</button>
+      <button id="pointRight">Point right</button>
+    </div>
+
+    <div class="row">
+      <button class="secondary" id="serverLeft">Server: left</button>
+      <button class="secondary" id="serverRight">Server: right</button>
+    </div>
+    <div class="row">
+      <button class="secondary" id="undo">Undo</button>
+      <button class="danger" id="close">Close match</button>
+    </div>
+  </div>
+
+<script>
+  const errorEl = document.getElementById("error");
+  const startForm = document.getElementById("startForm");
+  const matchView = document.getElementById("matchView");
+
+  function showError(message) {
+    errorEl.textContent = message;
+  }
+
+  function clearError() {
+    errorEl.textContent = "";
+  }
+
+  // Every mutating endpoint (and GET /api/state) returns this same shape,
+  // so one render() covers every response in the app — no separate
+  // success/failure rendering paths per action.
+  function render(state) {
+    if (!state.active) {
+      startForm.classList.remove("hidden");
+      matchView.classList.add("hidden");
+      return;
+    }
+
+    startForm.classList.add("hidden");
+    matchView.classList.remove("hidden");
+
+    document.getElementById("names").textContent =
+      `${state.nameLeft} vs ${state.nameRight} (best of ${state.bestOf})`;
+    document.getElementById("score").textContent =
+      `${state.scoreLeft} - ${state.scoreRight}`;
+    document.getElementById("serverLine").textContent =
+      `Sets: ${state.setsWonLeft} - ${state.setsWonRight} · Server: ${state.server}`;
+
+    const decidedEl = document.getElementById("decided");
+    if (state.decided) {
+      decidedEl.textContent = "Match decided — tap Close to start a new one";
+      decidedEl.classList.remove("hidden");
+    } else {
+      decidedEl.classList.add("hidden");
+    }
+  }
+
+  // No polling loop — this page is the sole control point (see
+  // docs/slices/02-display-bringup-plan.md's Checkpoint G). Every button
+  // tap's own response already carries full state, so render() only ever
+  // runs from a response we just received ourselves.
+  async function call(path, body) {
+    clearError();
+    try {
+      const response = await fetch(path, {
+        method: "POST",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        showError(data.error || `request failed (${response.status})`);
+        return;
+      }
+      render(data);
+    } catch (e) {
+      showError("network error — is the scoreboard still on the same WiFi?");
+    }
+  }
+
+  startForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    call("/api/match", {
+      nameLeft: document.getElementById("nameLeft").value,
+      nameRight: document.getElementById("nameRight").value,
+      bestOf: Number(document.getElementById("bestOf").value),
+    });
+  });
+
+  document.getElementById("pointLeft").addEventListener("click", () => call("/api/point", { side: "left" }));
+  document.getElementById("pointRight").addEventListener("click", () => call("/api/point", { side: "right" }));
+  document.getElementById("serverLeft").addEventListener("click", () => call("/api/server", { side: "left" }));
+  document.getElementById("serverRight").addEventListener("click", () => call("/api/server", { side: "right" }));
+  document.getElementById("undo").addEventListener("click", () => call("/api/undo"));
+  document.getElementById("close").addEventListener("click", () => call("/api/close"));
+
+  // Initial state on page load — the one GET this page ever makes outside
+  // of a button tap's own response.
+  fetch("/api/state")
+    .then((r) => r.json())
+    .then(render)
+    .catch(() => showError("couldn't reach the scoreboard"));
+</script>
+</body>
+</html>

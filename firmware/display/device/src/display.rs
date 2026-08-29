@@ -32,6 +32,7 @@ use mipidsi::interface::SpiInterface;
 use mipidsi::models::ST7789;
 use mipidsi::options::{ColorInversion, Orientation, Rotation};
 use mipidsi::Builder;
+use std::net::Ipv4Addr;
 
 type SpiIface<'d> =
     SpiInterface<'static, SpiDeviceDriver<'d, SpiDriver<'d>>, PinDriver<'d, Output>>;
@@ -46,6 +47,14 @@ pub struct St7789Display<'d> {
     // Held for its lifetime, not read again — dropping it would let the
     // pin float and could turn the backlight off.
     _backlight: PinDriver<'d, Output>,
+    // Not part of MatchState, and deliberately not threaded through the
+    // Display trait's render() signature — WiFi IP is an infrastructure
+    // concern, not domain state (see docs/slices/02-display-bringup-plan.md's
+    // Checkpoint G). Shown only while there's no Match to display instead
+    // (render() checks state.active), so this is private to the concrete
+    // type, not something the trait needs to know exists. `None` if WiFi
+    // never connected.
+    ip: Option<Ipv4Addr>,
 }
 
 impl<'d> St7789Display<'d> {
@@ -58,6 +67,7 @@ impl<'d> St7789Display<'d> {
         dc: Gpio16<'d>,
         rst: Gpio23<'d>,
         backlight: Gpio4<'d>,
+        ip: Option<Ipv4Addr>,
     ) -> anyhow::Result<Self> {
         // DMA is off by default and caps transactions at ~64 bytes — a
         // full-screen fill is 64,800 bytes.
@@ -98,6 +108,7 @@ impl<'d> St7789Display<'d> {
         Ok(Self {
             panel,
             _backlight: backlight,
+            ip,
         })
     }
 }
@@ -110,7 +121,20 @@ impl<'d> Display for St7789Display<'d> {
         }
 
         let style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-        let text = std::format!("{} - {}", state.score_left, state.score_right);
+
+        // Nothing useful to show about a Match that doesn't exist — show
+        // where to find the control page instead. Reverts to the score
+        // the moment a Match starts (state.active flips), and comes back
+        // whenever Close returns to Standby.
+        let text = if state.active {
+            std::format!("{} - {}", state.score_left, state.score_right)
+        } else {
+            match self.ip {
+                Some(ip) => std::format!("Scoreboard Ready\nhttp://{ip}"),
+                None => "Scoreboard Ready\n(no WiFi)".to_string(),
+            }
+        };
+
         if Text::new(&text, Point::new(10, 60), style)
             .draw(&mut self.panel)
             .is_err()
