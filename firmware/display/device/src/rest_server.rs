@@ -73,7 +73,8 @@ pub fn start(app: SharedApp) -> anyhow::Result<EspHttpServer<'static>> {
     let mut server = EspHttpServer::new(&config)?;
 
     server.fn_handler("/", Method::Get, |request| -> anyhow::Result<()> {
-        let mut response = request.into_response(200, None, &[("Content-Type", "text/html")])?;
+        let mut response =
+            request.into_response(200, None, &[("Content-Type", "text/html; charset=utf-8")])?;
         response.write_all(CONTROL_PAGE.as_bytes())?;
         Ok(())
     })?;
