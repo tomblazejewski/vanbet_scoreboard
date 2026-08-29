@@ -21,18 +21,19 @@ type SharedApp = Arc<Mutex<Application<St7789Display<'static>, NoopStorage>>>;
 
 /// Comfortably larger than any real body — the biggest, `StartMatchRequest`
 /// (two NAME_LEN=64-byte names plus JSON punctuation/keys), is well under
-/// 256 bytes. A sanity ceiling against a malformed/oversized
-/// Content-Length, not a tuned limit — but kept modest on purpose: this
-/// buffer is stack-allocated inside the httpd worker task's small stack
-/// (see `stack_size` below), so it isn't free the way a heap buffer would
-/// be.
+/// 256 bytes. Enforced against the request's declared Content-Length
+/// *before* reading any of the body (see `read_body`), so a body over
+/// this cap is rejected without ever partially consuming it — no leftover
+/// unread bytes to desync a reused (keep-alive) connection's next
+/// request.
 const MAX_BODY_LEN: usize = 256;
 
-/// A client-caused request failure (bad JSON, failed REST-boundary
-/// validation — see `display_rest::request`) — always maps to `400`. A
-/// genuine I/O error reading the body is a different, unrecoverable kind
-/// of failure and just propagates directly as `anyhow::Error` instead of
-/// going through this type — see `read_body`.
+/// A request failure that gets reported back to the client as `400` —
+/// bad JSON, failed REST-boundary validation (see `display_rest::request`),
+/// an over-cap or unreadable body. Genuine failures elsewhere (writing the
+/// response itself, the JSON encoder) stay `anyhow::Error` and propagate
+/// as a hard error instead — there's no client left to usefully report
+/// those to at that point.
 struct RequestError(String);
 
 impl From<serde_json::Error> for RequestError {
@@ -107,21 +108,49 @@ pub fn start(app: SharedApp) -> anyhow::Result<EspHttpServer<'static>> {
     Ok(server)
 }
 
-fn read_body<C>(request: &mut Request<C>, buf: &mut [u8]) -> anyhow::Result<usize>
+/// Rejects an over-cap body by its declared Content-Length, before
+/// reading any of it — reading up to a fixed buffer size and stopping
+/// there (the previous approach) can leave bytes the client already sent
+/// unread on the connection, corrupting the next request on a reused
+/// (keep-alive) connection. A client that omits Content-Length on a
+/// request with a body (chunked transfer encoding, or simply malformed)
+/// isn't handled specially — this protocol's own clients (curl, fetch(),
+/// any JSON HTTP library) always send it for a plain POST body, and
+/// protocol.md already scopes out REST-boundary robustness against
+/// malicious/malformed clients for this bring-up pass.
+fn read_body<C>(request: &mut Request<C>) -> Result<Vec<u8>, RequestError>
 where
     C: Connection,
     C::Error: std::error::Error + Send + Sync + 'static,
 {
+    let content_length: usize = request
+        .header("Content-Length")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
+    if content_length > MAX_BODY_LEN {
+        return Err(RequestError(format!(
+            "request body exceeds {MAX_BODY_LEN} bytes"
+        )));
+    }
+
+    let mut body = vec![0u8; content_length];
     let mut offset = 0;
-    loop {
-        let n = request.read(&mut buf[offset..])?;
-        if n == 0 || offset + n == buf.len() {
-            offset += n;
+    while offset < body.len() {
+        let n = request
+            .read(&mut body[offset..])
+            .map_err(|e| RequestError(format!("failed to read request body: {e}")))?;
+        if n == 0 {
+            // Connection closed before the declared Content-Length was
+            // fully sent. Don't treat as an I/O error — truncated JSON
+            // fails to parse on its own and reports as an ordinary 400
+            // through the same path as any other malformed body.
             break;
         }
         offset += n;
     }
-    Ok(offset)
+    body.truncate(offset);
+    Ok(body)
 }
 
 fn write_json<C>(
@@ -163,10 +192,7 @@ where
     C: Connection,
     C::Error: std::error::Error + Send + Sync + 'static,
 {
-    let mut buf = [0u8; MAX_BODY_LEN];
-    let n = read_body(&mut request, &mut buf)?;
-
-    let cmd = match parse(&buf[..n]) {
+    let cmd = match read_body(&mut request).and_then(|body| parse(&body)) {
         Ok(cmd) => cmd,
         Err(RequestError(msg)) => return write_error(request, 400, &msg),
     };
@@ -192,13 +218,10 @@ where
     C: Connection,
     C::Error: std::error::Error + Send + Sync + 'static,
 {
-    let mut buf = [0u8; MAX_BODY_LEN];
-    let n = read_body(&mut request, &mut buf)?;
-
-    let cmd = match (|| -> Result<Command, RequestError> {
-        let req: StartMatchRequest = serde_json::from_slice(&buf[..n])?;
+    let cmd = match read_body(&mut request).and_then(|body| {
+        let req: StartMatchRequest = serde_json::from_slice(&body)?;
         Ok(req.into_command()?)
-    })() {
+    }) {
         Ok(cmd) => cmd,
         Err(RequestError(msg)) => return write_error(request, 400, &msg),
     };
