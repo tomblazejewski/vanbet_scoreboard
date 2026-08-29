@@ -1,10 +1,13 @@
-use display_core::{Display, MatchState};
+use display_core::Application;
 use esp_idf_svc::eventloop::EspSystemEventLoop;
 use esp_idf_svc::hal::peripherals::Peripherals;
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use esp_idf_svc::wifi::{AuthMethod, BlockingWifi, ClientConfiguration, Configuration, EspWifi};
+use std::sync::{Arc, Mutex};
 
 mod display;
+mod rest_server;
+mod storage;
 
 // build.rs stages src/secrets.rs (gitignored, real credentials, never
 // committed) or falls back to secrets.rs.example into OUT_DIR at build
@@ -68,10 +71,7 @@ fn main() {
         }
     }
 
-    // Checkpoint D: prove the ST7789 driver works at all. Application
-    // isn't wired in yet (Checkpoints E/F), so a hand-built MatchState
-    // stands in for real match data.
-    match display::St7789Display::new(
+    let st7789 = display::St7789Display::new(
         peripherals.spi3,
         peripherals.pins.gpio18,
         peripherals.pins.gpio19,
@@ -79,31 +79,21 @@ fn main() {
         peripherals.pins.gpio16,
         peripherals.pins.gpio23,
         peripherals.pins.gpio4,
-    ) {
-        Ok(mut st7789) => {
-            let test_state = MatchState {
-                score_left: 7,
-                score_right: 5,
-                ..MatchState::default()
-            };
-            st7789.render(&test_state);
-            log::info!("St7789Display: rendered test state");
+    )
+    .expect("St7789Display::new failed");
 
-            // st7789 owns the backlight/reset pins and the SPI device —
-            // dropping it releases those pins, which is exactly what was
-            // causing "renders once, then goes dark" during bring-up: it
-            // was previously local to this match arm and got dropped the
-            // moment this block ended. Keeping it alive for the program's
-            // lifetime by looping right here instead.
-            loop {
-                std::thread::sleep(std::time::Duration::from_secs(60));
-            }
-        }
-        Err(e) => {
-            log::error!("St7789Display::new failed: {e:?}");
-            loop {
-                std::thread::sleep(std::time::Duration::from_secs(60));
-            }
-        }
+    // Checkpoint E: real Application, driven by the REST layer instead of
+    // a hand-built MatchState. new() renders the resumed (here: default
+    // Standby, since NoopStorage never has anything to resume) state
+    // immediately.
+    let app = Arc::new(Mutex::new(Application::new(st7789, storage::NoopStorage)));
+
+    // Keeping the returned EspHttpServer alive for the program's lifetime
+    // matters exactly the way it did for St7789Display in Checkpoint D —
+    // dropping it tears the server down.
+    let _server = rest_server::start(app).expect("rest_server::start failed");
+
+    loop {
+        std::thread::sleep(std::time::Duration::from_secs(60));
     }
 }
